@@ -1,0 +1,70 @@
+name: Bug report
+description: Report a reproducible problem with dsh-gentle-engram
+title: "bug: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please search existing issues first. Do not include secrets, tokens,
+        personal Engram data, local database files, or unredacted prompts and
+        tool results.
+  - type: input
+    id: package-version
+    attributes:
+      label: Package version and npm tag
+      description: Provide the installed version and tag, for example 0.1.1 / alpha.
+      placeholder: 0.1.1 / alpha
+    validations:
+      required: true
+  - type: textarea
+    id: runtime-versions
+    attributes:
+      label: Runtime versions
+      description: Include Node.js, DSH, and Engram versions or build identifiers.
+      placeholder: |
+        Node.js:
+        DSH:
+        Engram:
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Operating system and architecture
+      placeholder: Linux 6.x / x64
+    validations:
+      required: true
+  - type: textarea
+    id: configuration
+    attributes:
+      label: Profile and non-sensitive configuration
+      description: Include the DSH profile and relevant plugin or MCP configuration. Remove secrets and personal data.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the smallest profile and exact commands or actions that reproduce the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs
+      description: Remove credentials, tokens, prompts, personal data, and local paths before submitting.
+      render: text
+    validations:
+      required: false
