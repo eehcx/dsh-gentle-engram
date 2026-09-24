@@ -41,6 +41,7 @@
   "scripts": {
     "build": "tsdown",
     "typecheck": "tsc -p tsconfig.json",
+    "test": "pnpm run build && node --test",
     "prepublishOnly": "pnpm run typecheck && pnpm run build && npm pack --dry-run",
     "release:check": "pnpm run typecheck && pnpm run build && npm pack --dry-run",
     "release:alpha": "pnpm publish --access public --tag alpha",
