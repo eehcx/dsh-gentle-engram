@@ -32,10 +32,13 @@ cd dsh-gentle-engram
 pnpm install --frozen-lockfile
 ```
 
-The declared peer dependencies are `@deepseek-ai/cordis` `^4.0.1` and
-`@deepseek-ai/dsh-tools` `^0.1.1-rc.2`. The repository does not declare a DSH
-or Engram version range; compatibility changes should therefore include the
-versions used to verify them.
+The declared peer dependencies are `@deepseek-ai/cordis`
+`^4.0.1 || ~4.0.6-alpha.1` and `@deepseek-ai/dsh-tools`
+`^0.1.1-rc.2 || ^0.2.2-alpha.2`, spanning the DSH 0.1.1-rc.2 and
+0.2.2-alpha.2 tooling lines. The repository does not declare a DSH or Engram
+version range; compatibility changes should include the versions used to
+verify them and update the
+[alpha compatibility matrix](docs/alpha-compatibility.md).
 
 ## Making changes
 

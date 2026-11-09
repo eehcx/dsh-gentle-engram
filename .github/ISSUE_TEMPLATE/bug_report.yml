@@ -8,6 +8,10 @@ body:
         Please search existing issues first. Do not include secrets, tokens,
         personal Engram data, local database files, or unredacted prompts and
         tool results.
+
+        Before reporting a version mismatch, check the
+        [alpha compatibility matrix](https://github.com/eehcx/dsh-gentle-engram/blob/main/docs/alpha-compatibility.md).
+        Combinations listed as Unknown are not supported claims.
   - type: input
     id: package-version
     attributes:
