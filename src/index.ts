@@ -73,6 +73,21 @@ function isToolFailure(result: ToolResult | undefined): boolean {
   return !result || result.isError === true
 }
 
+function isUserOriginatedMessage(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false
+  try {
+    const message = value as JsonRecord
+    const source = message.source
+    return message.role === 'user'
+      && !!source
+      && typeof source === 'object'
+      && Object.hasOwn(source, 'kind')
+      && (source as JsonRecord).kind === 'user'
+  } catch {
+    return false
+  }
+}
+
 function redactPrivateText(text: string): string {
   let output = ''
   let visibleFrom = 0
@@ -110,6 +125,27 @@ function textOf(value: unknown): string {
 
 function bounded(text: string, limit: number): string {
   return text.length <= limit ? text : `${text.slice(0, Math.max(0, limit - 120))}\n${TRUNCATION_MARKER}`
+}
+
+function isTrivialLearning(text: string): boolean {
+  const trimmed = text.trim()
+  return trimmed.length <= 3 || /^(?:ok(?:ay)?|done|success(?:ful)?|complete(?:d)?|true|false|no output|n\/a|none)[.!?]*$/i.test(trimmed)
+}
+
+function keyLearningsFrom(text: string): string | undefined {
+  const lines = text.split(/\r?\n/)
+  const heading = lines.findIndex((line) => line.trim() === '## Key Learnings:')
+  if (heading < 0) return undefined
+
+  const learnings: string[] = []
+  for (const line of lines.slice(heading + 1)) {
+    const trimmed = line.trim()
+    if (/^#{1,6}\s/.test(trimmed)) break
+    const item = trimmed.match(/^(?:[-*]|\d+[.)])\s+(.+?)\s*$/)?.[1]
+    if (item && !isTrivialLearning(item)) learnings.push(item.trim())
+  }
+
+  return learnings.length ? `## Key Learnings:\n${learnings.map((item) => `- ${item}`).join('\n')}` : undefined
 }
 
 export function apply(ctx: CordisContext, rawConfig: Config = {}): void {
@@ -179,7 +215,7 @@ ${context}`))
 
   ctx.on('agent/inbox/inserted', (payload: { agent: Agent; message: unknown }) => {
     const state = sessions.get(payload.agent)
-    if (!state || state.disposed) return
+    if (!state || state.disposed || !isUserOriginatedMessage(payload.message)) return
     const content = bounded(redactPrivateText(textOf(payload.message)), CAPTURE_LIMIT)
     if (content.length <= 10 || content.includes('Relevant persistent Engram context')) return
     void callWhenReady(payload.agent, 'mem_save_prompt', { content, session_id: sessionIdOf(payload.agent) })
@@ -188,20 +224,26 @@ ${context}`))
   ctx.on('tools/result', (exec: ToolExecution, result: unknown) => {
     if (!config.captureToolResults || !exec.agent || exec.name.startsWith(`mcp__${config.serverName}__`)) return
     const state = sessions.get(exec.agent)
-    if (!state || state.disposed) return
-    const output = bounded(redactPrivateText(textOf(result)), CAPTURE_LIMIT)
+    if (!state || state.disposed || !result || typeof result !== 'object' || isToolFailure(result as ToolResult)) return
+    const rawOutput = redactPrivateText(textOf(result))
+    const output = bounded(rawOutput, CAPTURE_LIMIT)
     if (!output || /password|token|secret/i.test(output)) return
+    const content = keyLearningsFrom(output)
+    if (!content) return
+    const truncatedContent = rawOutput.length > CAPTURE_LIMIT ? `${content}\n${TRUNCATION_MARKER}` : content
+    const boundedContent = bounded(redactPrivateText(truncatedContent), CAPTURE_LIMIT)
     void callWhenReady(exec.agent, 'mem_capture_passive', {
-      content: bounded(redactPrivateText(`## Key Learnings:\n- Tool ${exec.name} returned:\n\n${output}`), CAPTURE_LIMIT),
+      content: boundedContent,
       session_id: sessionIdOf(exec.agent),
       source: 'dsh-tools-result',
     })
   })
 
   ctx.on('agent/turn-stopping', (payload: { agent: Agent }) => {
-    const state = sessions.get(payload.agent)
-    if (!state) return tails.get(payload.agent) || undefined
-    return state.ready.then(() => tails.get(payload.agent) || undefined)
+    const { agent } = payload
+    const state = sessions.get(agent)
+    if (!state) return tails.get(agent) || undefined
+    return state.ready.then(() => tails.get(agent) || undefined)
   })
 
   ctx.on('agent/disposed', (payload: { agent: Agent }) => {

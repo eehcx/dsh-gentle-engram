@@ -12,6 +12,8 @@ and uses [Semantic Versioning](https://semver.org/).
 - Redacted explicit `<private>...</private>` blocks recursively before sending
   captured prompts and passive tool results to Engram, and bounded each captured
   payload to 4,000 characters.
+- Restricted prompt capture to user-originated messages and passive capture to
+  intentional learning sections; failed and generic tool results are ignored.
 
 ### Added
 

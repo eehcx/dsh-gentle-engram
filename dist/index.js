@@ -39,6 +39,16 @@ function directoryOf(agent) {
 function isToolFailure(result) {
 	return !result || result.isError === true;
 }
+function isUserOriginatedMessage(value) {
+	if (!value || typeof value !== "object") return false;
+	try {
+		const message = value;
+		const source = message.source;
+		return message.role === "user" && !!source && typeof source === "object" && Object.hasOwn(source, "kind") && source.kind === "user";
+	} catch {
+		return false;
+	}
+}
 function redactPrivateText(text) {
 	let output = "";
 	let visibleFrom = 0;
@@ -66,6 +76,23 @@ function textOf(value) {
 }
 function bounded(text, limit) {
 	return text.length <= limit ? text : `${text.slice(0, Math.max(0, limit - 120))}\n${TRUNCATION_MARKER}`;
+}
+function isTrivialLearning(text) {
+	const trimmed = text.trim();
+	return trimmed.length <= 3 || /^(?:ok(?:ay)?|done|success(?:ful)?|complete(?:d)?|true|false|no output|n\/a|none)[.!?]*$/i.test(trimmed);
+}
+function keyLearningsFrom(text) {
+	const lines = text.split(/\r?\n/);
+	const heading = lines.findIndex((line) => line.trim() === "## Key Learnings:");
+	if (heading < 0) return void 0;
+	const learnings = [];
+	for (const line of lines.slice(heading + 1)) {
+		const trimmed = line.trim();
+		if (/^#{1,6}\s/.test(trimmed)) break;
+		const item = trimmed.match(/^(?:[-*]|\d+[.)])\s+(.+?)\s*$/)?.[1];
+		if (item && !isTrivialLearning(item)) learnings.push(item.trim());
+	}
+	return learnings.length ? `## Key Learnings:\n${learnings.map((item) => `- ${item}`).join("\n")}` : void 0;
 }
 function apply(ctx, rawConfig = {}) {
 	const config = {
@@ -131,7 +158,7 @@ ${context}`));
 	});
 	ctx.on("agent/inbox/inserted", (payload) => {
 		const state = sessions.get(payload.agent);
-		if (!state || state.disposed) return;
+		if (!state || state.disposed || !isUserOriginatedMessage(payload.message)) return;
 		const content = bounded(redactPrivateText(textOf(payload.message)), CAPTURE_LIMIT);
 		if (content.length <= 10 || content.includes("Relevant persistent Engram context")) return;
 		callWhenReady(payload.agent, "mem_save_prompt", {
@@ -142,19 +169,24 @@ ${context}`));
 	ctx.on("tools/result", (exec, result) => {
 		if (!config.captureToolResults || !exec.agent || exec.name.startsWith(`mcp__${config.serverName}__`)) return;
 		const state = sessions.get(exec.agent);
-		if (!state || state.disposed) return;
-		const output = bounded(redactPrivateText(textOf(result)), CAPTURE_LIMIT);
+		if (!state || state.disposed || !result || typeof result !== "object" || isToolFailure(result)) return;
+		const rawOutput = redactPrivateText(textOf(result));
+		const output = bounded(rawOutput, CAPTURE_LIMIT);
 		if (!output || /password|token|secret/i.test(output)) return;
+		const content = keyLearningsFrom(output);
+		if (!content) return;
+		const boundedContent = bounded(redactPrivateText(rawOutput.length > CAPTURE_LIMIT ? `${content}\n${TRUNCATION_MARKER}` : content), CAPTURE_LIMIT);
 		callWhenReady(exec.agent, "mem_capture_passive", {
-			content: bounded(redactPrivateText(`## Key Learnings:\n- Tool ${exec.name} returned:\n\n${output}`), CAPTURE_LIMIT),
+			content: boundedContent,
 			session_id: sessionIdOf(exec.agent),
 			source: "dsh-tools-result"
 		});
 	});
 	ctx.on("agent/turn-stopping", (payload) => {
-		const state = sessions.get(payload.agent);
-		if (!state) return tails.get(payload.agent) || void 0;
-		return state.ready.then(() => tails.get(payload.agent) || void 0);
+		const { agent } = payload;
+		const state = sessions.get(agent);
+		if (!state) return tails.get(agent) || void 0;
+		return state.ready.then(() => tails.get(agent) || void 0);
 	});
 	ctx.on("agent/disposed", (payload) => {
 		const { agent } = payload;

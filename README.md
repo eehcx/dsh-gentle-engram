@@ -33,7 +33,7 @@ You need:
 - Uses the existing `@deepseek-ai/dsh-mcp-client` row for official [Engram](https://github.com/Gentleman-Programming/engram) MCP stdio tools.
 - Hooks DSH session start, inbound prompts, tool results, turn stopping, and agent disposal.
 - Seeds relevant [Engram](https://github.com/Gentleman-Programming/engram) context into the next model step.
-- Saves prompts and filtered passive tool learnings asynchronously.
+- Saves user-originated prompts and intentional passive learnings asynchronously.
 - Serializes per-session writes and waits for pending writes at turn boundaries.
 - Closes [Engram](https://github.com/Gentleman-Programming/engram) sessions and records a structured summary when an agent is disposed.
 - Never accesses [Engram](https://github.com/Gentleman-Programming/engram) SQLite directly and avoids forwarding likely secrets.
@@ -65,8 +65,8 @@ the Engram installation or `PATH` first; this plugin does not provide Engram.
 
 The plugin connects the existing Engram MCP tools to DSH session start,
 prompts, tool results, turn boundaries, and agent disposal. It injects bounded
-prior context, serializes per-session writes, redacts explicit private blocks,
-limits captured payloads, filters likely sensitive tool results, and records a
+prior context, serializes per-agent writes, redacts explicit private blocks,
+limits captured payloads, skips failed and unmarked tool results, and records a
 disposal summary. It does not access Engram's SQLite database directly.
 
 Before sending captured text to Engram, the plugin recursively replaces
@@ -75,6 +75,12 @@ Before sending captured text to Engram, the plugin recursively replaces
 4,000 characters and marked when truncated. This is explicit marker-based
 redaction, not a complete secret scanner; avoid sending secrets or sensitive
 data outside marked blocks.
+
+Prompt capture accepts only messages with `role: "user"` and
+`source.kind: "user"`; plugin, system, and unknown sources are ignored. Passive
+capture skips failed tool results and generic output. It captures only
+bulleted or numbered entries under an exact `## Key Learnings:` heading,
+omitting surrounding output and trivial entries such as “ok” or “done”.
 
 Known limitations:
 
