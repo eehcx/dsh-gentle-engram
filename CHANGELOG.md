@@ -14,6 +14,8 @@ and uses [Semantic Versioning](https://semver.org/).
   payload to 4,000 characters.
 - Restricted prompt capture to user-originated messages and passive capture to
   intentional learning sections; failed and generic tool results are ignored.
+- Framed automatically recovered Engram context as bounded untrusted reference
+  data and refresh it after compaction only on an explicit DSH lifecycle signal.
 
 ### Added
 

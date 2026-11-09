@@ -90,6 +90,10 @@ prior context, serializes per-agent writes, redacts explicit private blocks,
 limits captured payloads, skips failed and unmarked tool results, and records a
 disposal summary. It does not access Engram's SQLite database directly.
 
+Recovered Engram context is reference data, not executable instruction. See
+the [memory context policy](docs/memory-context-policy.md) for the trust
+boundary, on-demand retrieval, and compaction behavior.
+
 Known limitations:
 
 - This is an alpha integration with no broad DSH/Engram compatibility matrix.
