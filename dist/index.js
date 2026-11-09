@@ -6,6 +6,7 @@ const inject = ["tools"];
 const DEFAULTS = {
 	serverName: "engram",
 	contextLimit: 8e3,
+	capturePrompts: true,
 	captureToolResults: true
 };
 const CAPTURE_LIMIT = 4e3;
@@ -157,6 +158,7 @@ ${context}`));
 		});
 	});
 	ctx.on("agent/inbox/inserted", (payload) => {
+		if (!config.capturePrompts) return;
 		const state = sessions.get(payload.agent);
 		if (!state || state.disposed || !isUserOriginatedMessage(payload.message)) return;
 		const content = bounded(redactPrivateText(textOf(payload.message)), CAPTURE_LIMIT);

@@ -19,6 +19,8 @@ and uses [Semantic Versioning](https://semver.org/).
 
 - Added repository guidance for security reports, issue submissions, pull
   requests, and code ownership.
+- Added an independent `capturePrompts` setting so prompt capture can be
+  disabled without affecting session startup or tool-result capture.
 
 ### Fixed
 

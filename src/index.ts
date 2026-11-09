@@ -32,6 +32,7 @@ type CordisContext = {
 type Config = {
   serverName?: string
   contextLimit?: number
+  capturePrompts?: boolean
   captureToolResults?: boolean
 }
 
@@ -41,6 +42,7 @@ export const inject = ['tools']
 const DEFAULTS: Required<Config> = {
   serverName: 'engram',
   contextLimit: 8000,
+  capturePrompts: true,
   captureToolResults: true,
 }
 const CAPTURE_LIMIT = 4000
@@ -214,6 +216,7 @@ ${context}`))
   })
 
   ctx.on('agent/inbox/inserted', (payload: { agent: Agent; message: unknown }) => {
+    if (!config.capturePrompts) return
     const state = sessions.get(payload.agent)
     if (!state || state.disposed || !isUserOriginatedMessage(payload.message)) return
     const content = bounded(redactPrivateText(textOf(payload.message)), CAPTURE_LIMIT)

@@ -3,7 +3,7 @@ import test from 'node:test'
 
 import { apply } from '../dist/index.js'
 
-function createHarness({ execute, cwd = '/workspace' } = {}) {
+function createHarness({ execute, config, cwd = '/workspace' } = {}) {
   const listeners = new Map()
   const calls = []
   const injections = []
@@ -42,7 +42,7 @@ function createHarness({ execute, cwd = '/workspace' } = {}) {
     },
   }
 
-  apply(context)
+  apply(context, config)
 
   return {
     agent: createAgent('session-1', cwd),
@@ -70,6 +70,77 @@ function userMessage(text) {
     content: [{ type: 'text', text }],
   }
 }
+
+test('captures prompts by default', async () => {
+  const harness = createHarness()
+  harness.enable('mcp__engram__mem_session_start', 'mcp__engram__mem_save_prompt')
+
+  harness.emit('agent/session-start', { agent: harness.agent })
+  await waitForTurn()
+
+  harness.emit('agent/inbox/inserted', {
+    agent: harness.agent,
+    message: userMessage('Please remember this user prompt.'),
+  })
+  await waitForTurn()
+
+  assert.deepEqual(harness.calls.map((call) => call.name), [
+    'mcp__engram__mem_session_start',
+    'mcp__engram__mem_save_prompt',
+  ])
+})
+
+test('prompt and tool-result capture settings remain independent', async () => {
+  const promptsDisabled = createHarness({ config: { capturePrompts: false } })
+  promptsDisabled.enable(
+    'mcp__engram__mem_session_start',
+    'mcp__engram__mem_context',
+    'mcp__engram__mem_save_prompt',
+    'mcp__engram__mem_capture_passive',
+  )
+  promptsDisabled.emit('agent/session-start', { agent: promptsDisabled.agent })
+  await waitForTurn()
+  await waitForTurn()
+  promptsDisabled.emit('agent/inbox/inserted', {
+    agent: promptsDisabled.agent,
+    message: userMessage('Please remember this user prompt.'),
+  })
+  promptsDisabled.emit('tools/result', { agent: promptsDisabled.agent, name: 'shell' }, {
+    text: '## Key Learnings:\n- Useful result output.',
+  })
+  await waitForTurn()
+  await waitForTurn()
+
+  assert.deepEqual(promptsDisabled.calls.map((call) => call.name), [
+    'mcp__engram__mem_session_start',
+    'mcp__engram__mem_context',
+    'mcp__engram__mem_capture_passive',
+  ])
+  assert.equal(promptsDisabled.injections.length, 1)
+
+  const toolResultsDisabled = createHarness({ config: { captureToolResults: false } })
+  toolResultsDisabled.enable(
+    'mcp__engram__mem_session_start',
+    'mcp__engram__mem_save_prompt',
+    'mcp__engram__mem_capture_passive',
+  )
+  toolResultsDisabled.emit('agent/session-start', { agent: toolResultsDisabled.agent })
+  await waitForTurn()
+  toolResultsDisabled.emit('agent/inbox/inserted', {
+    agent: toolResultsDisabled.agent,
+    message: userMessage('Please remember this user prompt.'),
+  })
+  toolResultsDisabled.emit('tools/result', { agent: toolResultsDisabled.agent, name: 'shell' }, {
+    text: '## Key Learnings:\n- Useful result output.',
+  })
+  await waitForTurn()
+  await waitForTurn()
+
+  assert.deepEqual(toolResultsDisabled.calls.map((call) => call.name), [
+    'mcp__engram__mem_session_start',
+    'mcp__engram__mem_save_prompt',
+  ])
+})
 
 test('recovers bounded context after session start and injects it as a user message', async () => {
   const context = 'x'.repeat(9000)

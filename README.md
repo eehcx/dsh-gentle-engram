@@ -38,9 +38,30 @@ You need:
 - Closes [Engram](https://github.com/Gentleman-Programming/engram) sessions and records a structured summary when an agent is disposed.
 - Never accesses [Engram](https://github.com/Gentleman-Programming/engram) SQLite directly and avoids forwarding likely secrets.
 
+## Capture configuration
+
+Prompt capture and passive tool-result capture are independent settings; both
+default to `true`. Set `capturePrompts: false` in the lifecycle plugin's bundle
+configuration to disable `mem_save_prompt` calls. Session startup, context
+recovery, and tool-result capture remain enabled. Set `captureToolResults: false`
+to disable passive tool-result capture without affecting prompt capture.
+
+Prompt capture accepts only messages with `role: "user"` and
+`source.kind: "user"`; plugin, system, and unknown sources are ignored. Passive
+capture skips failed tool results and generic output. It captures only
+bulleted or numbered entries under an exact `## Key Learnings:` heading,
+omitting surrounding output and trivial entries such as “ok” or “done”.
+
 Engram capture requires a non-empty DSH session working directory and successful
 project registration. If either is unavailable, the plugin skips memory reads
 and writes for that session.
+
+Before sending captured text to Engram, the plugin recursively replaces
+`<private>...</private>` blocks—including nested and multiline blocks—with
+`[REDACTED]`. Each outgoing prompt or passive tool-result payload is limited to
+4,000 characters and marked when truncated. This is explicit marker-based
+redaction, not a complete secret scanner; avoid sending secrets or sensitive
+data outside marked blocks.
 
 ## Installation from npm
 
@@ -68,19 +89,6 @@ prompts, tool results, turn boundaries, and agent disposal. It injects bounded
 prior context, serializes per-agent writes, redacts explicit private blocks,
 limits captured payloads, skips failed and unmarked tool results, and records a
 disposal summary. It does not access Engram's SQLite database directly.
-
-Before sending captured text to Engram, the plugin recursively replaces
-`<private>...</private>` blocks—including nested and multiline blocks—with
-`[REDACTED]`. Each outgoing prompt or passive tool-result payload is limited to
-4,000 characters and marked when truncated. This is explicit marker-based
-redaction, not a complete secret scanner; avoid sending secrets or sensitive
-data outside marked blocks.
-
-Prompt capture accepts only messages with `role: "user"` and
-`source.kind: "user"`; plugin, system, and unknown sources are ignored. Passive
-capture skips failed tool results and generic output. It captures only
-bulleted or numbered entries under an exact `## Key Learnings:` heading,
-omitting surrounding output and trivial entries such as “ok” or “done”.
 
 Known limitations:
 
