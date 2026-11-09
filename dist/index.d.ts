@@ -40,6 +40,7 @@ type CordisContext = {
 type Config = {
   serverName?: string;
   contextLimit?: number;
+  capturePrompts?: boolean;
   captureToolResults?: boolean;
 };
 declare const name = "dsh-gentle-engram";

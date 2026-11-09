@@ -12,11 +12,17 @@ and uses [Semantic Versioning](https://semver.org/).
 - Redacted explicit `<private>...</private>` blocks recursively before sending
   captured prompts and passive tool results to Engram, and bounded each captured
   payload to 4,000 characters.
+- Restricted prompt capture to user-originated messages and passive capture to
+  intentional learning sections; failed and generic tool results are ignored.
+- Framed automatically recovered Engram context as bounded untrusted reference
+  data and refresh it after compaction only on an explicit DSH lifecycle signal.
 
 ### Added
 
 - Added repository guidance for security reports, issue submissions, pull
   requests, and code ownership.
+- Added an independent `capturePrompts` setting so prompt capture can be
+  disabled without affecting session startup or tool-result capture.
 
 ### Fixed
 
