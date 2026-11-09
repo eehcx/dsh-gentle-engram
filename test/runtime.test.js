@@ -263,3 +263,90 @@ test('keeps concurrent agent project attribution isolated', async () => {
     [['session-1', 'session-1'], ['session-2', 'session-2']],
   )
 })
+
+test('redacts private blocks recursively in prompt and passive captures', async () => {
+  const harness = createHarness()
+  harness.enable('mcp__engram__mem_session_start', 'mcp__engram__mem_save_prompt', 'mcp__engram__mem_capture_passive')
+  harness.emit('agent/session-start', { agent: harness.agent })
+  await waitForTurn()
+
+  harness.emit('agent/inbox/inserted', {
+    agent: harness.agent,
+    message: {
+      role: 'user',
+      content: [{
+        type: 'text',
+        text: 'Start\n<private>first line\n<private>nested</private>\nlast line</private> middle <private>repeat</private> end <private></private>.',
+      }],
+      metadata: { note: 'Hidden <private>metadata</private>.' },
+    },
+  })
+  harness.emit('tools/result', { agent: harness.agent, name: 'shell' }, {
+    content: [{ type: 'text', text: 'Visible <private>tool secret</private> output.' }],
+  })
+  await waitForTurn()
+  await waitForTurn()
+
+  const prompt = harness.calls.find((call) => call.name.endsWith('mem_save_prompt'))
+  const passive = harness.calls.find((call) => call.name.endsWith('mem_capture_passive'))
+  assert.equal(prompt.arguments.content, 'Start\n[REDACTED] middle [REDACTED] end [REDACTED].')
+  assert.match(passive.arguments.content, /Visible \[REDACTED\] output\./)
+  assert.doesNotMatch(`${prompt.arguments.content}\n${passive.arguments.content}`, /first line|nested|repeat|tool secret|<private>/)
+})
+
+test('redacts private blocks that span multiple content blocks', async () => {
+  const harness = createHarness()
+  harness.enable('mcp__engram__mem_session_start', 'mcp__engram__mem_save_prompt', 'mcp__engram__mem_capture_passive')
+  harness.emit('agent/session-start', { agent: harness.agent })
+  await waitForTurn()
+
+  harness.emit('agent/inbox/inserted', {
+    agent: harness.agent,
+    message: {
+      role: 'user',
+      content: [
+        { type: 'text', text: 'visible before <private>secret first half' },
+        { type: 'text', text: 'secret second half</private> visible after' },
+      ],
+    },
+  })
+  harness.emit('tools/result', { agent: harness.agent, name: 'shell' }, {
+    content: [
+      { type: 'text', text: '## Key Learnings:\n- result before <private>hidden first half' },
+      { type: 'text', text: 'hidden second half</private> result after' },
+    ],
+  })
+  await waitForTurn()
+  await waitForTurn()
+
+  const prompt = harness.calls.find((call) => call.name.endsWith('mem_save_prompt'))
+  const passive = harness.calls.find((call) => call.name.endsWith('mem_capture_passive'))
+  assert.equal(prompt.arguments.content, 'visible before [REDACTED] visible after')
+  assert.match(passive.arguments.content, /result before \[REDACTED\]/)
+  assert.doesNotMatch(
+    `${prompt.arguments.content}\n${passive.arguments.content}`,
+    /secret first half|secret second half|hidden first half|hidden second half|<\/?private>/,
+  )
+})
+
+test('bounds prompt and passive capture payloads to 4000 characters', async () => {
+  const harness = createHarness()
+  harness.enable('mcp__engram__mem_session_start', 'mcp__engram__mem_save_prompt', 'mcp__engram__mem_capture_passive')
+  harness.emit('agent/session-start', { agent: harness.agent })
+  await waitForTurn()
+
+  harness.emit('agent/inbox/inserted', {
+    agent: harness.agent,
+    message: { role: 'user', content: [{ type: 'text', text: 'p'.repeat(5000) }] },
+  })
+  harness.emit('tools/result', { agent: harness.agent, name: 'shell' }, { text: 'r'.repeat(5000) })
+  await waitForTurn()
+  await waitForTurn()
+
+  const prompt = harness.calls.find((call) => call.name.endsWith('mem_save_prompt'))
+  const passive = harness.calls.find((call) => call.name.endsWith('mem_capture_passive'))
+  assert.ok(prompt.arguments.content.length <= 4000)
+  assert.ok(passive.arguments.content.length <= 4000)
+  assert.match(prompt.arguments.content, /\.\.\.\[truncated by dsh-gentle-engram\]$/)
+  assert.match(passive.arguments.content, /\.\.\.\[truncated by dsh-gentle-engram\]$/)
+})

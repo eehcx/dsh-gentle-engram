@@ -65,17 +65,25 @@ the Engram installation or `PATH` first; this plugin does not provide Engram.
 
 The plugin connects the existing Engram MCP tools to DSH session start,
 prompts, tool results, turn boundaries, and agent disposal. It injects bounded
-prior context, serializes per-session writes, filters likely sensitive tool
-results, and records a disposal summary. It does not access Engram's SQLite
-database directly.
+prior context, serializes per-session writes, redacts explicit private blocks,
+limits captured payloads, filters likely sensitive tool results, and records a
+disposal summary. It does not access Engram's SQLite database directly.
+
+Before sending captured text to Engram, the plugin recursively replaces
+`<private>...</private>` blocks—including nested and multiline blocks—with
+`[REDACTED]`. Each outgoing prompt or passive tool-result payload is limited to
+4,000 characters and marked when truncated. This is explicit marker-based
+redaction, not a complete secret scanner; avoid sending secrets or sensitive
+data outside marked blocks.
 
 Known limitations:
 
 - This is an alpha integration with no broad DSH/Engram compatibility matrix.
 - The bridge depends on the `engram` executable and DSH's MCP/plugin lifecycle;
   missing or incompatible host tooling can prevent startup or persistence.
-- Tool-result filtering is heuristic, not a guarantee that secrets or personal
-  data are safe to send. Do not use it as a security boundary.
+- Private-block redaction and tool-result filtering are not a guarantee that
+  secrets or personal data are safe to send. Do not use them as a complete
+  security boundary.
 - The package does not promise backward compatibility across DSH, Engram, or
   alpha package releases.
 

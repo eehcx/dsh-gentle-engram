@@ -8,6 +8,9 @@ const DEFAULTS = {
 	contextLimit: 8e3,
 	captureToolResults: true
 };
+const CAPTURE_LIMIT = 4e3;
+const REDACTED = "[REDACTED]";
+const TRUNCATION_MARKER = "...[truncated by dsh-gentle-engram]";
 function createInjectedMessage(text) {
 	return {
 		id: randomUUID(),
@@ -36,6 +39,23 @@ function directoryOf(agent) {
 function isToolFailure(result) {
 	return !result || result.isError === true;
 }
+function redactPrivateText(text) {
+	let output = "";
+	let visibleFrom = 0;
+	let depth = 0;
+	for (const match of text.matchAll(/<\/?private>/gi)) {
+		const index = match.index ?? 0;
+		if (!match[0].startsWith("</")) {
+			if (depth === 0) output += `${text.slice(visibleFrom, index)}${REDACTED}`;
+			depth++;
+		} else if (depth > 0) {
+			depth--;
+			if (depth === 0) visibleFrom = index + match[0].length;
+		}
+	}
+	if (depth === 0) output += text.slice(visibleFrom);
+	return output;
+}
 function textOf(value) {
 	if (typeof value === "string") return value;
 	if (!value || typeof value !== "object") return "";
@@ -45,7 +65,7 @@ function textOf(value) {
 	return "";
 }
 function bounded(text, limit) {
-	return text.length <= limit ? text : `${text.slice(0, Math.max(0, limit - 120))}\n...[truncated by dsh-gentle-engram]`;
+	return text.length <= limit ? text : `${text.slice(0, Math.max(0, limit - 120))}\n${TRUNCATION_MARKER}`;
 }
 function apply(ctx, rawConfig = {}) {
 	const config = {
@@ -112,7 +132,7 @@ ${context}`));
 	ctx.on("agent/inbox/inserted", (payload) => {
 		const state = sessions.get(payload.agent);
 		if (!state || state.disposed) return;
-		const content = textOf(payload.message);
+		const content = bounded(redactPrivateText(textOf(payload.message)), CAPTURE_LIMIT);
 		if (content.length <= 10 || content.includes("Relevant persistent Engram context")) return;
 		callWhenReady(payload.agent, "mem_save_prompt", {
 			content,
@@ -123,10 +143,10 @@ ${context}`));
 		if (!config.captureToolResults || !exec.agent || exec.name.startsWith(`mcp__${config.serverName}__`)) return;
 		const state = sessions.get(exec.agent);
 		if (!state || state.disposed) return;
-		const output = bounded(textOf(result), 4e3);
+		const output = bounded(redactPrivateText(textOf(result)), CAPTURE_LIMIT);
 		if (!output || /password|token|secret/i.test(output)) return;
 		callWhenReady(exec.agent, "mem_capture_passive", {
-			content: `## Key Learnings:\n- Tool ${exec.name} returned:\n\n${output}`,
+			content: bounded(redactPrivateText(`## Key Learnings:\n- Tool ${exec.name} returned:\n\n${output}`), CAPTURE_LIMIT),
 			session_id: sessionIdOf(exec.agent),
 			source: "dsh-tools-result"
 		});
