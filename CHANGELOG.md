@@ -5,6 +5,25 @@ All notable changes to `dsh-gentle-engram` are documented here.
 This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and uses [Semantic Versioning](https://semver.org/).
 
+## [0.2.0](https://github.com/eehcx/dsh-gentle-engram/compare/v0.1.1...v0.2.0) (2026-11-09)
+
+
+### Features
+
+* **config:** make prompt capture independently configurable ([d2d4812](https://github.com/eehcx/dsh-gentle-engram/commit/d2d48122a413ebb4517a3743ac79f1a502a242ff)), closes [#13](https://github.com/eehcx/dsh-gentle-engram/issues/13)
+* resolve issues [#10](https://github.com/eehcx/dsh-gentle-engram/issues/10)–[#16](https://github.com/eehcx/dsh-gentle-engram/issues/16) (tracker) ([d9402e4](https://github.com/eehcx/dsh-gentle-engram/commit/d9402e45528b3a967f44e3ef040f6099fc410eb6))
+
+
+### Bug Fixes
+
+* **capture:** capture only user prompts and intentional learnings ([5a37e9d](https://github.com/eehcx/dsh-gentle-engram/commit/5a37e9db2b2a8ab6f24c20e549ad47bc4bcff856)), closes [#12](https://github.com/eehcx/dsh-gentle-engram/issues/12)
+* **compat:** accept the DSH 0.2.2-alpha.2 tooling line ([823d2b4](https://github.com/eehcx/dsh-gentle-engram/commit/823d2b437d4ef9e1dd83bd28f71dfd3dfd996d5b))
+* **compat:** accept the DSH 0.2.2-alpha.2 tooling line ([bc70e24](https://github.com/eehcx/dsh-gentle-engram/commit/bc70e242f8a4ef319459f4b0219094d4762d77af))
+* **security:** redact private blocks and bound capture payloads ([ac476ba](https://github.com/eehcx/dsh-gentle-engram/commit/ac476baac5342c8cc553f4bccf46fae11761e04a))
+* **security:** redact private blocks and bound capture payloads ([e71f4ca](https://github.com/eehcx/dsh-gentle-engram/commit/e71f4cae7dd652029f1d4213e406d5f1150c231f)), closes [#11](https://github.com/eehcx/dsh-gentle-engram/issues/11)
+* **security:** treat recalled memory as untrusted reference data ([352fe28](https://github.com/eehcx/dsh-gentle-engram/commit/352fe28c46e06b8dcc6eeae2e0dbacca6b2e2d98)), closes [#14](https://github.com/eehcx/dsh-gentle-engram/issues/14)
+* **session:** fail closed on project attribution ([d8e74ba](https://github.com/eehcx/dsh-gentle-engram/commit/d8e74bab88a95553298f5e33527679f8bbb3fdc9))
+
 ## [Unreleased]
 
 ### Changed
