@@ -15,9 +15,12 @@ This integration requires [Engram](https://github.com/Gentleman-Programming/engr
 ## Compatibility and requirements
 
 The repository's CI currently runs on **Node.js 22**. The package declares
-`@deepseek-ai/cordis` `^4.0.1` and `@deepseek-ai/dsh-tools` `^0.1.1-rc.2`
-as peer dependencies. This project does not declare a DSH or Engram version
-range, so compatibility with other versions is not promised until verified.
+`@deepseek-ai/cordis` `^4.0.1 || ~4.0.6-alpha.1` and
+`@deepseek-ai/dsh-tools` `^0.1.1-rc.2 || ^0.2.2-alpha.2` as peer dependencies.
+The second DSH tools range covers the DSH 0.2.2-alpha.2 line. A declared range
+is packaging metadata, not proof that a DSH/Engram combination works: see the
+[alpha compatibility matrix](docs/alpha-compatibility.md) for the checks that
+have passed and the combinations that remain unknown.
 
 You need:
 
@@ -96,7 +99,9 @@ boundary, on-demand retrieval, and compaction behavior.
 
 Known limitations:
 
-- This is an alpha integration with no broad DSH/Engram compatibility matrix.
+- The [alpha compatibility matrix](docs/alpha-compatibility.md) distinguishes
+  verified package checks from unknown DSH/Engram combinations; no live
+  combination is verified yet.
 - The bridge depends on the `engram` executable and DSH's MCP/plugin lifecycle;
   missing or incompatible host tooling can prevent startup or persistence.
 - Private-block redaction and tool-result filtering are not a guarantee that

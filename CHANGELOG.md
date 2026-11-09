@@ -16,11 +16,17 @@ and uses [Semantic Versioning](https://semver.org/).
   intentional learning sections; failed and generic tool results are ignored.
 - Framed automatically recovered Engram context as bounded untrusted reference
   data and refresh it after compaction only on an explicit DSH lifecycle signal.
+- Expanded the declared Cordis and DSH tools peer ranges to include the DSH
+  0.2.2-alpha.2 tooling line, so the DSH plugin compatibility gate accepts the
+  package on both alpha lines.
 
 ### Added
 
 - Added repository guidance for security reports, issue submissions, pull
   requests, and code ownership.
+- Added an alpha compatibility matrix that separates verified package checks
+  from unknown DSH/Engram combinations, linked from the README and the bug
+  report template.
 - Added an independent `capturePrompts` setting so prompt capture can be
   disabled without affecting session startup or tool-result capture.
 
