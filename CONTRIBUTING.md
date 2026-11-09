@@ -116,7 +116,8 @@ Releases are managed with [Release Please](https://github.com/googleapis/release
 1. Use [Conventional Commits](https://www.conventionalcommits.org/), such as `fix:` or `feat:`.
 2. Push changes to `main`; Release Please opens or updates a release PR.
 3. Merge the release PR. It creates a GitHub Release and tag.
-4. The publish workflow validates, builds, and publishes that tag to npm.
+4. The publish workflow checks out that tag, verifies it matches `package.json`, builds, and publishes it to npm.
+5. Releases created with the default `GITHUB_TOKEN` do not trigger `release` workflows, so Release Please dispatches `publish.yml` explicitly. To republish or publish by hand, run the **Publish package** workflow from **Actions** and pass the release tag (for example `v0.2.0`).
 
 The npm package must have GitHub Actions configured as a trusted publisher for this repository and the workflow `.github/workflows/publish.yml`. Do not add an npm token to the repository.
 
