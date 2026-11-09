@@ -14,6 +14,7 @@ type UserMessage = {
 }
 type ToolResult = JsonRecord & { content?: unknown }
 type ToolExecution = { agent?: Agent; name: string }
+type SessionState = { ready: Promise<boolean>; started: boolean; disposed: boolean }
 type ToolRegistry = {
   get: (name: string, agent?: Agent) => unknown
   execute: (input: JsonRecord) => Promise<ToolResult>
@@ -58,10 +59,15 @@ function sessionIdOf(agent: Agent | undefined): string | undefined {
 
 function directoryOf(agent: Agent | undefined): string | undefined {
   try {
-    return agent?.session?.requestHeader?.()?.cwd || undefined
+    const directory = agent?.session?.requestHeader?.()?.cwd
+    return typeof directory === 'string' && directory.trim() ? directory : undefined
   } catch {
     return undefined
   }
+}
+
+function isToolFailure(result: ToolResult | undefined): boolean {
+  return !result || result.isError === true
 }
 
 function textOf(value: unknown): string {
@@ -86,9 +92,8 @@ function bounded(text: string, limit: number): string {
 export function apply(ctx: CordisContext, rawConfig: Config = {}): void {
   const config = { ...DEFAULTS, ...rawConfig }
   const tools = ctx.tools
-  const active = new Set<string>()
-  const started = new Set<string>()
-  const tails = new Map<string, Promise<unknown>>()
+  const sessions = new WeakMap<Agent, SessionState>()
+  const tails = new WeakMap<Agent, Promise<unknown>>()
 
   const call = (agent: Agent | undefined, rawName: string, args: JsonRecord): Promise<ToolResult | undefined> => {
     const id = sessionIdOf(agent)
@@ -102,17 +107,20 @@ export function apply(ctx: CordisContext, rawConfig: Config = {}): void {
       agent,
       signal: new AbortController().signal,
     })
-    const previous = tails.get(id) || Promise.resolve()
+    const previous = tails.get(agent) || Promise.resolve()
     const next = previous.catch(() => undefined).then(operation)
-    const tail = next.finally(() => {
-      if (tails.get(id) === tail) tails.delete(id)
-    })
     // Keep the coordination tail settled even when the MCP call fails.
-    tails.set(id, tail.catch(() => undefined))
+    tails.set(agent, next.catch(() => undefined))
     return next.catch((error: unknown) => {
       ctx.logger?.warn(`engram ${rawName} failed for ${id}: ${String(error)}`)
       return undefined
     })
+  }
+
+  const callWhenReady = (agent: Agent | undefined, rawName: string, args: JsonRecord): Promise<ToolResult | undefined> => {
+    const state = agent ? sessions.get(agent) : undefined
+    if (!agent || !state || state.disposed) return Promise.resolve(undefined)
+    return state.ready.then((ready) => ready && !state.disposed ? call(agent, rawName, args) : undefined)
   }
 
   const contextText = async (agent: Agent): Promise<string> => {
@@ -123,51 +131,74 @@ export function apply(ctx: CordisContext, rawConfig: Config = {}): void {
   ctx.on('agent/session-start', (payload: { agent: Agent }) => {
     const { agent } = payload
     const id = sessionIdOf(agent)
-    if (!id || active.has(id)) return
-    active.add(id)
+    if (sessions.has(agent)) return
     const directory = directoryOf(agent)
-    void call(agent, 'mem_session_start', { id, ...(directory ? { directory } : {}) }).then(async (result) => {
-      // A failed project lookup must not trigger a second automatic lookup.
-      if (!result) return
-      started.add(id)
+    const state: SessionState = { ready: Promise.resolve(false), started: false, disposed: false }
+    sessions.set(agent, state)
+    if (!id || !directory) return
+
+    state.ready = call(agent, 'mem_session_start', { id, directory }).then((result) => {
+      if (isToolFailure(result)) return false
+      state.started = true
+      return true
+    })
+
+    void state.ready.then(async (ready) => {
+      if (!ready || state.disposed) return
       const context = await contextText(agent)
-      if (context) agent.inject(createInjectedMessage(`Relevant persistent Engram context for this session:\n\n${context}`))
+      if (context && !state.disposed) {
+        agent.inject(createInjectedMessage(`Relevant persistent Engram context for this session:
+
+${context}`))
+      }
     })
   })
 
   ctx.on('agent/inbox/inserted', (payload: { agent: Agent; message: unknown }) => {
+    const state = sessions.get(payload.agent)
+    if (!state || state.disposed) return
     const content = textOf(payload.message)
     if (content.length <= 10 || content.includes('Relevant persistent Engram context')) return
-    void call(payload.agent, 'mem_save_prompt', { content, session_id: sessionIdOf(payload.agent) })
+    void callWhenReady(payload.agent, 'mem_save_prompt', { content, session_id: sessionIdOf(payload.agent) })
   })
 
   ctx.on('tools/result', (exec: ToolExecution, result: unknown) => {
     if (!config.captureToolResults || !exec.agent || exec.name.startsWith(`mcp__${config.serverName}__`)) return
+    const state = sessions.get(exec.agent)
+    if (!state || state.disposed) return
     const output = bounded(textOf(result), 4000)
     if (!output || /password|token|secret/i.test(output)) return
-    void call(exec.agent, 'mem_capture_passive', {
+    void callWhenReady(exec.agent, 'mem_capture_passive', {
       content: `## Key Learnings:\n- Tool ${exec.name} returned:\n\n${output}`,
       session_id: sessionIdOf(exec.agent),
       source: 'dsh-tools-result',
     })
   })
 
-  ctx.on('agent/turn-stopping', (payload: { agent: Agent }) => tails.get(sessionIdOf(payload.agent) || '') || undefined)
+  ctx.on('agent/turn-stopping', (payload: { agent: Agent }) => {
+    const state = sessions.get(payload.agent)
+    if (!state) return tails.get(payload.agent) || undefined
+    return state.ready.then(() => tails.get(payload.agent) || undefined)
+  })
 
   ctx.on('agent/disposed', (payload: { agent: Agent }) => {
-    const id = sessionIdOf(payload.agent)
-    if (!id) return
-    if (!started.has(id)) {
-      active.delete(id)
-      return
-    }
-    void call(payload.agent, 'mem_session_summary', {
-      content: `## Goal\nPreserve the completed DeepSeek Harness session in Engram.\n\n## Accomplished\n- Session lifecycle and relevant tool activity were captured automatically.\n\n## Next Steps\n- Review the session memories when continuing work.\n\n## Relevant Files\n- Session ${id}`,
-      session_id: id,
+    const { agent } = payload
+    const id = sessionIdOf(agent)
+    const state = sessions.get(agent)
+    if (!id || !state || state.disposed) return
+    state.disposed = true
+    void state.ready.then(async (ready) => {
+      if (!ready || !state.started) return
+      try {
+        await call(agent, 'mem_session_summary', {
+          content: `## Goal\nPreserve the completed DeepSeek Harness session in Engram.\n\n## Accomplished\n- Session lifecycle and relevant tool activity were captured automatically.\n\n## Next Steps\n- Review the session memories when continuing work.\n\n## Relevant Files\n- Session ${id}`,
+          session_id: id,
+        })
+      } finally {
+        await call(agent, 'mem_session_end', { id, summary: 'DeepSeek Harness session ended.' })
+      }
     }).finally(() => {
-      started.delete(id)
-      active.delete(id)
-      return call(payload.agent, 'mem_session_end', { id, summary: 'DeepSeek Harness session ended.' })
+      sessions.delete(agent)
     })
   })
 
@@ -180,7 +211,7 @@ export function apply(ctx: CordisContext, rawConfig: Config = {}): void {
 
   ctx.provide('engramMemory', {
     sessionIdOf,
-    search: (agent: Agent, query: string) => call(agent, 'mem_search', { query }),
-    save: (agent: Agent, args: JsonRecord) => call(agent, 'mem_save', { ...args, session_id: sessionIdOf(agent) }),
+    search: (agent: Agent, query: string) => callWhenReady(agent, 'mem_search', { query }),
+    save: (agent: Agent, args: JsonRecord) => callWhenReady(agent, 'mem_save', { ...args, session_id: sessionIdOf(agent) }),
   })
 }

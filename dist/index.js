@@ -27,10 +27,14 @@ function sessionIdOf(agent) {
 }
 function directoryOf(agent) {
 	try {
-		return agent?.session?.requestHeader?.()?.cwd || void 0;
+		const directory = agent?.session?.requestHeader?.()?.cwd;
+		return typeof directory === "string" && directory.trim() ? directory : void 0;
 	} catch {
 		return;
 	}
+}
+function isToolFailure(result) {
+	return !result || result.isError === true;
 }
 function textOf(value) {
 	if (typeof value === "string") return value;
@@ -49,9 +53,8 @@ function apply(ctx, rawConfig = {}) {
 		...rawConfig
 	};
 	const tools = ctx.tools;
-	const active = /* @__PURE__ */ new Set();
-	const started = /* @__PURE__ */ new Set();
-	const tails = /* @__PURE__ */ new Map();
+	const sessions = /* @__PURE__ */ new WeakMap();
+	const tails = /* @__PURE__ */ new WeakMap();
 	const call = (agent, rawName, args) => {
 		const id = sessionIdOf(agent);
 		if (!id || !agent) return Promise.resolve(void 0);
@@ -64,14 +67,16 @@ function apply(ctx, rawConfig = {}) {
 			agent,
 			signal: new AbortController().signal
 		});
-		const next = (tails.get(id) || Promise.resolve()).catch(() => void 0).then(operation);
-		const tail = next.finally(() => {
-			if (tails.get(id) === tail) tails.delete(id);
-		});
-		tails.set(id, tail.catch(() => void 0));
+		const next = (tails.get(agent) || Promise.resolve()).catch(() => void 0).then(operation);
+		tails.set(agent, next.catch(() => void 0));
 		return next.catch((error) => {
 			ctx.logger?.warn(`engram ${rawName} failed for ${id}: ${String(error)}`);
 		});
+	};
+	const callWhenReady = (agent, rawName, args) => {
+		const state = agent ? sessions.get(agent) : void 0;
+		if (!agent || !state || state.disposed) return Promise.resolve(void 0);
+		return state.ready.then((ready) => ready && !state.disposed ? call(agent, rawName, args) : void 0);
 	};
 	const contextText = async (agent) => {
 		return bounded(textOf(await call(agent, "mem_context", {})), config.contextLimit);
@@ -79,55 +84,79 @@ function apply(ctx, rawConfig = {}) {
 	ctx.on("agent/session-start", (payload) => {
 		const { agent } = payload;
 		const id = sessionIdOf(agent);
-		if (!id || active.has(id)) return;
-		active.add(id);
+		if (sessions.has(agent)) return;
 		const directory = directoryOf(agent);
-		call(agent, "mem_session_start", {
+		const state = {
+			ready: Promise.resolve(false),
+			started: false,
+			disposed: false
+		};
+		sessions.set(agent, state);
+		if (!id || !directory) return;
+		state.ready = call(agent, "mem_session_start", {
 			id,
-			...directory ? { directory } : {}
-		}).then(async (result) => {
-			if (!result) return;
-			started.add(id);
+			directory
+		}).then((result) => {
+			if (isToolFailure(result)) return false;
+			state.started = true;
+			return true;
+		});
+		state.ready.then(async (ready) => {
+			if (!ready || state.disposed) return;
 			const context = await contextText(agent);
-			if (context) agent.inject(createInjectedMessage(`Relevant persistent Engram context for this session:\n\n${context}`));
+			if (context && !state.disposed) agent.inject(createInjectedMessage(`Relevant persistent Engram context for this session:
+
+${context}`));
 		});
 	});
 	ctx.on("agent/inbox/inserted", (payload) => {
+		const state = sessions.get(payload.agent);
+		if (!state || state.disposed) return;
 		const content = textOf(payload.message);
 		if (content.length <= 10 || content.includes("Relevant persistent Engram context")) return;
-		call(payload.agent, "mem_save_prompt", {
+		callWhenReady(payload.agent, "mem_save_prompt", {
 			content,
 			session_id: sessionIdOf(payload.agent)
 		});
 	});
 	ctx.on("tools/result", (exec, result) => {
 		if (!config.captureToolResults || !exec.agent || exec.name.startsWith(`mcp__${config.serverName}__`)) return;
+		const state = sessions.get(exec.agent);
+		if (!state || state.disposed) return;
 		const output = bounded(textOf(result), 4e3);
 		if (!output || /password|token|secret/i.test(output)) return;
-		call(exec.agent, "mem_capture_passive", {
+		callWhenReady(exec.agent, "mem_capture_passive", {
 			content: `## Key Learnings:\n- Tool ${exec.name} returned:\n\n${output}`,
 			session_id: sessionIdOf(exec.agent),
 			source: "dsh-tools-result"
 		});
 	});
-	ctx.on("agent/turn-stopping", (payload) => tails.get(sessionIdOf(payload.agent) || "") || void 0);
+	ctx.on("agent/turn-stopping", (payload) => {
+		const state = sessions.get(payload.agent);
+		if (!state) return tails.get(payload.agent) || void 0;
+		return state.ready.then(() => tails.get(payload.agent) || void 0);
+	});
 	ctx.on("agent/disposed", (payload) => {
-		const id = sessionIdOf(payload.agent);
-		if (!id) return;
-		if (!started.has(id)) {
-			active.delete(id);
-			return;
-		}
-		call(payload.agent, "mem_session_summary", {
-			content: `## Goal\nPreserve the completed DeepSeek Harness session in Engram.\n\n## Accomplished\n- Session lifecycle and relevant tool activity were captured automatically.\n\n## Next Steps\n- Review the session memories when continuing work.\n\n## Relevant Files\n- Session ${id}`,
-			session_id: id
+		const { agent } = payload;
+		const id = sessionIdOf(agent);
+		const state = sessions.get(agent);
+		if (!id || !state || state.disposed) return;
+		state.disposed = true;
+		state.ready.then(async (ready) => {
+			if (!ready || !state.started) return;
+			try {
+				await call(agent, "mem_session_summary", {
+					content: `## Goal\nPreserve the completed DeepSeek Harness session in Engram.\n\n## Accomplished\n- Session lifecycle and relevant tool activity were captured automatically.\n\n## Next Steps\n- Review the session memories when continuing work.\n\n## Relevant Files\n- Session ${id}`,
+					session_id: id
+				});
+			} finally {
+				await call(agent, "mem_session_end", {
+					id,
+					summary: "DeepSeek Harness session ended."
+				});
+			}
 		}).finally(() => {
-			started.delete(id);
-			active.delete(id);
-			return call(payload.agent, "mem_session_end", {
-				id,
-				summary: "DeepSeek Harness session ended."
-			});
+			sessions.delete(agent);
 		});
 	});
 	ctx.get("systemPrompt")?.section({
@@ -137,8 +166,8 @@ function apply(ctx, rawConfig = {}) {
 	});
 	ctx.provide("engramMemory", {
 		sessionIdOf,
-		search: (agent, query) => call(agent, "mem_search", { query }),
-		save: (agent, args) => call(agent, "mem_save", {
+		search: (agent, query) => callWhenReady(agent, "mem_search", { query }),
+		save: (agent, args) => callWhenReady(agent, "mem_save", {
 			...args,
 			session_id: sessionIdOf(agent)
 		})

@@ -12,6 +12,11 @@ and uses [Semantic Versioning](https://semver.org/).
 - Added repository guidance for security reports, issue submissions, pull
   requests, and code ownership.
 
+### Fixed
+
+- Fail closed on missing session directories or unsuccessful project registration
+  before reading or writing Engram memory.
+
 ## [0.1.1]
 
 ### Added

@@ -38,6 +38,10 @@ You need:
 - Closes [Engram](https://github.com/Gentleman-Programming/engram) sessions and records a structured summary when an agent is disposed.
 - Never accesses [Engram](https://github.com/Gentleman-Programming/engram) SQLite directly and avoids forwarding likely secrets.
 
+Engram capture requires a non-empty DSH session working directory and successful
+project registration. If either is unavailable, the plugin skips memory reads
+and writes for that session.
+
 ## Installation from npm
 
 Install the alpha channel with:
