@@ -1,0 +1,43 @@
+name: Feature request
+description: Suggest a focused improvement for dsh-gentle-engram
+title: "feat: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please search existing issues first and keep the request focused.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem or limitation should this address?
+    validations:
+      required: true
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use case
+      description: Who needs this and in what workflow does it matter?
+    validations:
+      required: true
+  - type: textarea
+    id: desired-outcome
+    attributes:
+      label: Desired outcome
+      description: Describe the behavior or result you want.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What workarounds or other approaches have you tried?
+    validations:
+      required: true
+  - type: textarea
+    id: contribution
+    attributes:
+      label: Possible contribution
+      description: If known, describe how you could help implement or validate this request.
+    validations:
+      required: false
