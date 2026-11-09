@@ -8,15 +8,28 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  actions: write
 
 jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
       - name: Create or update release PR
+        id: release
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
           release-type: node
           package-name: dsh-gentle-engram
           target-branch: main
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      # A release created with GITHUB_TOKEN does not emit a `release: published`
+      # event that starts another workflow. `workflow_dispatch` is the documented
+      # exception, so the publish workflow is dispatched explicitly here.
+      - name: Dispatch the publish workflow
+        if: steps.release.outputs.release_created == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG_NAME: ${{ steps.release.outputs.tag_name }}
+        run: gh workflow run publish.yml --ref main -f tag="$TAG_NAME"
