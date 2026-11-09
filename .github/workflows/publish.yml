@@ -50,4 +50,9 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Publish to npm
+        # Fallback credential until trusted publishing is configured for the
+        # package on npmjs.com; never commit a token, it lives in repository
+        # secrets.
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
         run: npm publish --access public --provenance

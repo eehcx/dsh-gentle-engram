@@ -119,7 +119,7 @@ Releases are managed with [Release Please](https://github.com/googleapis/release
 4. The publish workflow checks out that tag, verifies it matches `package.json`, builds, and publishes it to npm.
 5. Releases created with the default `GITHUB_TOKEN` do not trigger `release` workflows, so Release Please dispatches `publish.yml` explicitly. To republish or publish by hand, run the **Publish package** workflow from **Actions** and pass the release tag (for example `v0.2.0`).
 
-The npm package must have GitHub Actions configured as a trusted publisher for this repository and the workflow `.github/workflows/publish.yml`. Do not add an npm token to the repository.
+The npm package must have GitHub Actions configured as a trusted publisher for this repository and the workflow `.github/workflows/publish.yml`. Until that configuration exists, the publish step falls back to the `NODE_AUTH_TOKEN` repository secret (an npm token with publish access to `dsh-gentle-engram`); remove that secret once trusted publishing works. Never commit a token to the repository.
 
 ## Reporting security issues
 
