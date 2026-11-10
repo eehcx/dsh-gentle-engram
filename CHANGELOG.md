@@ -5,6 +5,16 @@ All notable changes to `dsh-gentle-engram` are documented here.
 This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and uses [Semantic Versioning](https://semver.org/).
 
+## [0.3.0](https://github.com/eehcx/dsh-gentle-engram/compare/v0.2.0...v0.3.0) (2026-11-10)
+
+
+### Features
+
+* adopt hybrid architecture with quality modules from fork ([abfee0a](https://github.com/eehcx/dsh-gentle-engram/commit/abfee0a695329a788daebfacad55e52e20893528))
+* adopt hybrid architecture with quality modules from fork ([b64efc3](https://github.com/eehcx/dsh-gentle-engram/commit/b64efc302c91ecb7fea9587e73db9a76c1eb7cfa))
+* **ui:** add visual Engram Settings section and client plugin bundle ([748a867](https://github.com/eehcx/dsh-gentle-engram/commit/748a867a9c94fdd4a21095e8a3e32357629507db))
+* **ui:** add visual Engram Settings section and client plugin bundle ([d22878a](https://github.com/eehcx/dsh-gentle-engram/commit/d22878a515983206b481d10802911bb80c4b8b1c))
+
 ## [0.2.0](https://github.com/eehcx/dsh-gentle-engram/compare/v0.1.1...v0.2.0) (2026-11-09)
 
 
