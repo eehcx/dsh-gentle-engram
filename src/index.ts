@@ -280,6 +280,16 @@ export function apply(ctx: CordisContext, rawConfig: ConfigInput = {}): void {
     text: PROTOCOL_TEXT,
   })
 
+  try {
+    (ctx as any).inject?.(['settings'], (settingsCtx: any) => {
+      settingsCtx.settings?.register?.('engram', Config, {
+        base: config,
+      })
+    })
+  } catch {
+    // optional service
+  }
+
   ctx.provide('engramMemory', {
     sessionIdOf,
     search: (agent: Agent, query: string) => callWhenReady(agent, 'mem_search', { query }),
