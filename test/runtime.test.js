@@ -218,6 +218,23 @@ test('skips automatic recall when the configured limit cannot fit its trust fram
   assert.equal(harness.injections.length, 0)
 })
 
+test('skips automatic recall when ambientMemory is configured to false', async () => {
+  const harness = createHarness({
+    config: { ambientMemory: false },
+    execute: async (input) => input.name.endsWith('mem_context') ? { text: 'Project memory.' } : { text: 'started' },
+  })
+  harness.enable('mcp__engram__mem_session_start', 'mcp__engram__mem_context')
+
+  harness.emit('agent/session-start', { agent: harness.agent, source: 'startup' })
+  await waitForTurn()
+  await waitForTurn()
+
+  assert.deepEqual(harness.calls.map((call) => call.name), [
+    'mcp__engram__mem_session_start',
+  ])
+  assert.equal(harness.injections.length, 0)
+})
+
 test('refreshes recalled context only after an explicit compact lifecycle event', async () => {
   let contextReads = 0
   const harness = createHarness({
