@@ -1,3 +1,7 @@
 .atl/
 node_modules/
 *.log
+*.tgz
+.verify/
+.codegraph/
+.playwright-mcp/
