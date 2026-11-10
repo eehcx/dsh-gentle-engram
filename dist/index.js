@@ -1284,6 +1284,11 @@ function apply(ctx, rawConfig = {}) {
 		order: 40,
 		text: PROTOCOL_TEXT
 	});
+	try {
+		ctx.inject?.(["settings"], (settingsCtx) => {
+			settingsCtx.settings?.register?.("engram", Config, { base: config });
+		});
+	} catch {}
 	ctx.provide("engramMemory", {
 		sessionIdOf,
 		search: (agent, query) => callWhenReady(agent, "mem_search", { query }),
