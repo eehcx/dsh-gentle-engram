@@ -43,6 +43,19 @@ test('publishes an alpha compatibility matrix and links it from user-facing docs
   assert.ok(bugTemplate.includes('alpha-compatibility.md'));
 });
 
+test('keeps serverName on the MCP client row, not the memory plugin config', async () => {
+  const patch = await readText('cordis.patch.yml');
+  const memoryRow = patch.split('id: engram-memory')[1];
+
+  assert.ok(memoryRow, 'patch is missing the engram-memory row');
+  assert.doesNotMatch(memoryRow, /serverName:/);
+});
+
+test('browser client bundle does not depend on the Node process global', async () => {
+  const bundle = await readText('dist/client.cjs');
+  assert.doesNotMatch(bundle, /process\.env/);
+});
+
 test('keeps the lockfile specifiers in sync with the declared peer ranges', async () => {
   const lockfile = await readText('pnpm-lock.yaml');
   assert.ok(lockfile.includes("specifier: ^4.0.1 || ~4.0.6-alpha.1"));
