@@ -5,6 +5,14 @@ All notable changes to `dsh-gentle-engram` are documented here.
 This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and uses [Semantic Versioning](https://semver.org/).
 
+## [0.3.3](https://github.com/eehcx/dsh-gentle-engram/compare/v0.3.2...v0.3.3) (2026-11-11)
+
+
+### Bug Fixes
+
+* use host React runtime for settings UI ([be59eea](https://github.com/eehcx/dsh-gentle-engram/commit/be59eead8530940569d4357c5274b74bd122eb1b))
+* use host React runtime for settings UI ([db1f53c](https://github.com/eehcx/dsh-gentle-engram/commit/db1f53cce837d2a104dc27c1b8fcf81e8dd6011f))
+
 ## [0.3.2](https://github.com/eehcx/dsh-gentle-engram/compare/v0.3.1...v0.3.2) (2026-11-11)
 
 
