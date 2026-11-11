@@ -7,11 +7,8 @@ var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __commonJS = (cb, mod) => function() {
-	return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
-};
 var __copyProps = (to, from, except, desc) => {
-	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n$1 = keys.length, key; i < n$1; i++) {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
 		key = keys[i];
 		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
 			get: ((k) => from[k]).bind(null, key),
@@ -26,96 +23,11 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 }) : target, mod));
 
 //#endregion
+let react = require("react");
+react = __toESM(react);
 
-//#region node_modules/.pnpm/react@18.3.1/node_modules/react/cjs/react.production.min.js
-var require_react_production_min = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/react@18.3.1/node_modules/react/cjs/react.production.min.js": ((exports) => {
-	var l = Symbol.for("react.element"), n = Symbol.for("react.portal"), p = Symbol.for("react.fragment"), q = Symbol.for("react.strict_mode"), r = Symbol.for("react.profiler"), t = Symbol.for("react.provider"), u = Symbol.for("react.context"), v = Symbol.for("react.forward_ref"), w = Symbol.for("react.suspense"), x = Symbol.for("react.memo"), y = Symbol.for("react.lazy"), z = Symbol.iterator;
-	var B = {
-		isMounted: function() {
-			return !1;
-		},
-		enqueueForceUpdate: function() {},
-		enqueueReplaceState: function() {},
-		enqueueSetState: function() {}
-	}, C = Object.assign, D = {};
-	function E(a, b, e$1) {
-		this.props = a;
-		this.context = b;
-		this.refs = D;
-		this.updater = e$1 || B;
-	}
-	E.prototype.isReactComponent = {};
-	E.prototype.setState = function(a, b) {
-		if ("object" !== typeof a && "function" !== typeof a && null != a) throw Error("setState(...): takes an object of state variables to update or a function which returns an object of state variables.");
-		this.updater.enqueueSetState(this, a, b, "setState");
-	};
-	E.prototype.forceUpdate = function(a) {
-		this.updater.enqueueForceUpdate(this, a, "forceUpdate");
-	};
-	function F() {}
-	F.prototype = E.prototype;
-	function G(a, b, e$1) {
-		this.props = a;
-		this.context = b;
-		this.refs = D;
-		this.updater = e$1 || B;
-	}
-	var H = G.prototype = new F();
-	H.constructor = G;
-	C(H, E.prototype);
-	H.isPureReactComponent = !0;
-	var I = Array.isArray, J = Object.prototype.hasOwnProperty, K = { current: null }, L = {
-		key: !0,
-		ref: !0,
-		__self: !0,
-		__source: !0
-	};
-	function M(a, b, e$1) {
-		var d, c = {}, k = null, h = null;
-		if (null != b) for (d in void 0 !== b.ref && (h = b.ref), void 0 !== b.key && (k = "" + b.key), b) J.call(b, d) && !L.hasOwnProperty(d) && (c[d] = b[d]);
-		var g = arguments.length - 2;
-		if (1 === g) c.children = e$1;
-		else if (1 < g) {
-			for (var f = Array(g), m = 0; m < g; m++) f[m] = arguments[m + 2];
-			c.children = f;
-		}
-		if (a && a.defaultProps) for (d in g = a.defaultProps, g) void 0 === c[d] && (c[d] = g[d]);
-		return {
-			$$typeof: l,
-			type: a,
-			key: k,
-			ref: h,
-			props: c,
-			_owner: K.current
-		};
-	}
-	var U = { current: null }, V = { transition: null }, W = {
-		ReactCurrentDispatcher: U,
-		ReactCurrentBatchConfig: V,
-		ReactCurrentOwner: K
-	};
-	exports.createElement = M;
-	exports.useCallback = function(a, b) {
-		return U.current.useCallback(a, b);
-	};
-	exports.useEffect = function(a, b) {
-		return U.current.useEffect(a, b);
-	};
-	exports.useState = function(a) {
-		return U.current.useState(a);
-	};
-}) });
-
-//#endregion
-//#region node_modules/.pnpm/react@18.3.1/node_modules/react/index.js
-var require_react = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/react@18.3.1/node_modules/react/index.js": ((exports, module) => {
-	module.exports = require_react_production_min();
-}) });
-
-//#endregion
 //#region src/client.ts
-var import_react = /* @__PURE__ */ __toESM(require_react(), 1);
-const e = import_react.createElement;
+const e = react.default.createElement;
 const name = "dsh-gentle-engram";
 const inject = ["slots", "locale"];
 const DEFAULT_SETTINGS = {
@@ -143,14 +55,14 @@ function saveSettings(settings) {
 	} catch {}
 }
 function EngramSettingsView(props) {
-	const [health, setHealth] = (0, import_react.useState)({
+	const [health, setHealth] = (0, react.useState)({
 		status: "checking",
 		port: 7437
 	});
-	const [stats, setStats] = (0, import_react.useState)(null);
-	const [settings, setSettings] = (0, import_react.useState)(loadSavedSettings);
-	const [savedNotice, setSavedNotice] = (0, import_react.useState)(null);
-	const checkServer = (0, import_react.useCallback)(async () => {
+	const [stats, setStats] = (0, react.useState)(null);
+	const [settings, setSettings] = (0, react.useState)(loadSavedSettings);
+	const [savedNotice, setSavedNotice] = (0, react.useState)(null);
+	const checkServer = (0, react.useCallback)(async () => {
 		setHealth((prev) => ({
 			...prev,
 			status: "checking"
@@ -185,7 +97,7 @@ function EngramSettingsView(props) {
 		});
 		setStats(null);
 	}, []);
-	(0, import_react.useEffect)(() => {
+	(0, react.useEffect)(() => {
 		checkServer();
 	}, [checkServer]);
 	const updateSetting = (key, value) => {

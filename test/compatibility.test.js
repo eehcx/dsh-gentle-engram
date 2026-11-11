@@ -51,9 +51,11 @@ test('keeps serverName on the MCP client row, not the memory plugin config', asy
   assert.doesNotMatch(memoryRow, /serverName:/);
 });
 
-test('browser client bundle does not depend on the Node process global', async () => {
+test('browser client bundle uses the host React runtime and avoids Node globals', async () => {
   const bundle = await readText('dist/client.cjs');
   assert.doesNotMatch(bundle, /process\.env/);
+  assert.match(bundle, /require\(["']react["']\)/);
+  assert.doesNotMatch(bundle, /react\.production\.min\.js/);
 });
 
 test('keeps the lockfile specifiers in sync with the declared peer ranges', async () => {

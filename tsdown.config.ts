@@ -15,6 +15,7 @@ export default defineConfig([
     format: ['cjs'],
     clean: false,
     platform: 'browser',
+    external: ['react'],
     define: {
       'process.env.NODE_ENV': '"production"',
     },
