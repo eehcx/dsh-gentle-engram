@@ -54,6 +54,111 @@ function saveSettings(settings) {
 		if (typeof localStorage !== "undefined") localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
 	} catch {}
 }
+const styles = {
+	root: {
+		display: "flex",
+		flexDirection: "column",
+		gap: "18px",
+		width: "100%",
+		maxWidth: "640px",
+		color: "var(--dsw-alias-label-primary)",
+		fontFamily: "inherit",
+		fontSize: "13px",
+		lineHeight: 1.5
+	},
+	intro: {
+		margin: 0,
+		color: "var(--dsw-alias-label-tertiary)",
+		fontSize: "13px",
+		lineHeight: "20px"
+	},
+	section: {
+		padding: "12px 14px",
+		border: "0.5px solid var(--dsw-alias-settings-card-stroke, var(--dsw-alias-border-l4, var(--dsw-alias-border-l2)))",
+		borderRadius: "var(--dsw-radius-xl, 20px)",
+		background: "var(--dsw-alias-settings-card-fill, var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-layer-1)))"
+	},
+	sectionTitle: {
+		margin: 0,
+		fontSize: "14px",
+		lineHeight: "22px",
+		fontWeight: 500
+	},
+	row: {
+		display: "flex",
+		alignItems: "center",
+		justifyContent: "space-between",
+		gap: "20px",
+		padding: "11px 0",
+		borderBottom: "0.5px solid var(--dsw-alias-border-l2)"
+	},
+	rowLabel: {
+		fontSize: "13px",
+		lineHeight: "20px",
+		fontWeight: 500
+	},
+	hint: {
+		margin: "2px 0 0",
+		color: "var(--dsw-alias-label-tertiary)",
+		fontSize: "12px",
+		lineHeight: "18px"
+	},
+	control: {
+		boxSizing: "border-box",
+		height: "34px",
+		flexShrink: 0,
+		border: "0.5px solid var(--dsw-alias-border-l4, var(--dsw-alias-border-l2))",
+		borderRadius: "var(--dsw-radius-md, 8px)",
+		background: "var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-layer-1))",
+		color: "var(--dsw-alias-label-primary)",
+		font: "inherit",
+		fontSize: "13px"
+	},
+	button: {
+		boxSizing: "border-box",
+		display: "inline-flex",
+		alignItems: "center",
+		justifyContent: "center",
+		minHeight: "28px",
+		flexShrink: 0,
+		padding: "0 10px",
+		border: "0.5px solid var(--dsw-alias-border-l3, var(--dsw-alias-border-l2))",
+		borderRadius: "var(--dsw-radius-sm, 6px)",
+		color: "var(--dsw-alias-label-primary)",
+		font: "inherit",
+		fontSize: "12px",
+		lineHeight: "18px",
+		cursor: "pointer"
+	}
+};
+const settingsUiCss = `
+.engram-settings { color-scheme: light; }
+body[data-ds-dark-theme] .engram-settings { color-scheme: dark; }
+.engram-settings button:hover:not(:disabled):not([role="switch"]) { background: var(--dsw-alias-interactive-bg-hover, var(--dsw-alias-bg-layer-3)); }
+.engram-settings button:active:not(:disabled):not([role="switch"]) { background: var(--dsw-alias-interactive-bg-active, var(--dsw-alias-bg-layer-3)); }
+.engram-settings button:disabled { opacity: .45; cursor: default; }
+.engram-settings button:focus-visible,
+.engram-settings input:focus-visible { outline: var(--dsw-focus-ring-width, 2px) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary, var(--dsw-alias-brand-primary))); outline-offset: 2px; }
+.engram-settings input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var(--dsw-alias-brand-primary); cursor: pointer; }
+.engram-settings input[type="number"] { width: 104px; padding: 0 10px; text-align: right; font-variant-numeric: tabular-nums; }
+.engram-settings [role="switch"] { width: 36px; height: 20px; padding: 0; border: 0; border-radius: 999px; background: var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-layer-1)); position: relative; }
+.engram-settings [role="switch"][aria-checked="true"] { background: var(--dsw-alias-brand-primary); }
+.engram-settings [role="switch"] span { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--dsw-alias-label-primary-foreground, var(--dsw-alias-bg-layer-1)); transition: transform 150ms ease-out; }
+.engram-settings [role="switch"][aria-checked="true"] span { transform: translateX(16px); }
+.engram-settings [role="status"] { color: var(--dsw-alias-state-success-primary); font-size: 12px; }
+.engram-settings .engram-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.engram-settings .engram-stat { padding: 0 14px; border-right: .5px solid var(--dsw-alias-border-l2); }
+.engram-settings .engram-stat:first-child { padding-left: 0; }
+.engram-settings .engram-stat:last-child { padding-right: 0; border-right: 0; }
+.engram-settings .engram-stat-label { color: var(--dsw-alias-label-tertiary); font-size: 12px; line-height: 18px; }
+.engram-settings .engram-stat-value { margin-top: 2px; font-size: 16px; line-height: 24px; font-weight: 500; font-variant-numeric: tabular-nums; }
+@media (max-width: 520px) {
+  .engram-settings .engram-stats { grid-template-columns: 1fr; gap: 10px; }
+  .engram-settings .engram-stat, .engram-settings .engram-stat:first-child, .engram-settings .engram-stat:last-child { padding: 0; border: 0; }
+  .engram-settings .engram-stat { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+}
+@media (prefers-reduced-motion: reduce) { .engram-settings [role="switch"] span { transition: none; } }
+`;
 function EngramSettingsView(props) {
 	const [health, setHealth] = (0, react.useState)({
 		status: "checking",
@@ -112,203 +217,103 @@ function EngramSettingsView(props) {
 			} catch {}
 			return next;
 		});
-		setSavedNotice("Guardado automáticamente");
+		setSavedNotice("Cambios guardados automáticamente");
 		setTimeout(() => setSavedNotice(null), 2500);
 	};
-	const renderToggle = (label, description, checked, onToggle) => {
-		return e("div", { style: {
-			display: "flex",
-			justifyContent: "space-between",
-			alignItems: "flex-start",
-			padding: "12px 0",
-			borderBottom: "1px solid var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.06))"
-		} }, e("div", { style: { maxWidth: "80%" } }, e("div", { style: {
-			fontWeight: 500,
-			fontSize: "14px"
-		} }, label), e("div", { style: {
-			fontSize: "12px",
-			color: "var(--dsw-alias-label-secondary, #a1a1aa)",
-			marginTop: "4px",
-			lineHeight: 1.4
-		} }, description)), e("button", {
-			role: "switch",
-			"aria-checked": checked,
-			onClick: onToggle,
-			style: {
-				cursor: "pointer",
-				width: "44px",
-				height: "24px",
-				borderRadius: "12px",
-				border: "none",
-				background: checked ? "var(--dsw-alias-brand-primary, #3b82f6)" : "var(--dsw-alias-bg-layer-4, #52525b)",
-				position: "relative",
-				transition: "background 0.2s",
-				flexShrink: 0
-			}
-		}, e("span", { style: {
-			position: "absolute",
-			top: "2px",
-			left: checked ? "22px" : "2px",
-			width: "20px",
-			height: "20px",
-			borderRadius: "50%",
-			background: "#ffffff",
-			transition: "left 0.2s"
-		} })));
-	};
-	return e("div", { style: {
-		display: "flex",
-		flexDirection: "column",
-		gap: "24px",
-		padding: "24px",
-		maxWidth: "720px",
-		color: "var(--dsw-alias-label-primary, #f4f4f5)",
-		fontFamily: "inherit"
-	} }, e("div", { style: {
-		display: "flex",
-		justifyContent: "space-between",
-		alignItems: "center",
-		padding: "18px 20px",
-		background: "var(--dsw-alias-bg-layer-3, #27272a)",
-		borderRadius: "12px",
-		border: "1px solid var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.1))"
-	} }, e("div", null, e("div", { style: {
-		display: "flex",
-		alignItems: "center",
-		gap: "10px"
-	} }, e("h2", { style: {
-		margin: 0,
-		fontSize: "18px",
-		fontWeight: 600
-	} }, "Engram Persistent Memory"), e("span", { style: {
-		display: "inline-flex",
-		alignItems: "center",
-		gap: "6px",
-		padding: "3px 10px",
-		borderRadius: "9999px",
-		fontSize: "12px",
-		fontWeight: 500,
-		background: health.status === "online" ? "rgba(34, 197, 94, 0.15)" : health.status === "checking" ? "rgba(234, 179, 8, 0.15)" : "rgba(239, 68, 68, 0.15)",
-		color: health.status === "online" ? "#22c55e" : health.status === "checking" ? "#eab308" : "#ef4444"
-	} }, e("span", { style: {
-		width: "7px",
-		height: "7px",
-		borderRadius: "50%",
-		background: health.status === "online" ? "#22c55e" : health.status === "checking" ? "#eab308" : "#ef4444"
-	} }), health.status === "online" ? `HTTP Conectado (puerto ${health.port})` : health.status === "checking" ? "Comprobando..." : "Servidor HTTP inactivo (Puente MCP activo)")), e("p", { style: {
-		margin: "6px 0 0",
-		fontSize: "13px",
-		color: "var(--dsw-alias-label-secondary, #a1a1aa)"
-	} }, health.status === "online" ? `Instancia: ${health.instanceId ? health.instanceId.slice(0, 12) + "..." : "local"} · Versión: ${health.version ?? "activa"}` : "DSH ejecuta las herramientas mediante el puente MCP stdio de Engram. Puedes iniciar el servidor HTTP local con `engram serve` si requieres API web.")), e("button", {
-		onClick: checkServer,
+	const renderToggle = (label, description, checked, onToggle) => e("div", { style: styles.row }, e("div", { style: {
+		minWidth: 0,
+		flex: 1
+	} }, e("div", { style: styles.rowLabel }, label), e("p", { style: styles.hint }, description)), e("button", {
+		type: "button",
+		role: "switch",
+		"aria-checked": checked,
+		"aria-label": label,
+		onClick: onToggle,
 		style: {
-			cursor: "pointer",
-			padding: "8px 14px",
-			fontSize: "12px",
-			fontWeight: 500,
-			borderRadius: "8px",
-			background: "var(--dsw-alias-bg-layer-4, #3f3f46)",
-			color: "inherit",
-			border: "1px solid var(--dsw-alias-border-l4, rgba(255, 255, 255, 0.15))"
+			...styles.button,
+			border: 0,
+			minHeight: 0,
+			padding: 0
 		}
-	}, "Refrescar")), stats && e("div", { style: {
-		display: "grid",
-		gridTemplateColumns: "repeat(3, 1fr)",
-		gap: "12px"
-	} }, e("div", { style: {
-		padding: "14px",
-		borderRadius: "10px",
-		background: "var(--dsw-alias-bg-layer-3, #27272a)",
-		border: "1px solid var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.08))"
-	} }, e("div", { style: {
-		fontSize: "12px",
-		color: "var(--dsw-alias-label-secondary, #a1a1aa)"
-	} }, "Proyectos Registrados"), e("div", { style: {
-		fontSize: "20px",
-		fontWeight: 600,
-		marginTop: "4px"
-	} }, stats.projectsCount ?? "—")), e("div", { style: {
-		padding: "14px",
-		borderRadius: "10px",
-		background: "var(--dsw-alias-bg-layer-3, #27272a)",
-		border: "1px solid var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.08))"
-	} }, e("div", { style: {
-		fontSize: "12px",
-		color: "var(--dsw-alias-label-secondary, #a1a1aa)"
-	} }, "Observaciones Guardadas"), e("div", { style: {
-		fontSize: "20px",
-		fontWeight: 600,
-		marginTop: "4px"
-	} }, stats.observationsCount ?? "—")), e("div", { style: {
-		padding: "14px",
-		borderRadius: "10px",
-		background: "var(--dsw-alias-bg-layer-3, #27272a)",
-		border: "1px solid var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.08))"
-	} }, e("div", { style: {
-		fontSize: "12px",
-		color: "var(--dsw-alias-label-secondary, #a1a1aa)"
-	} }, "Sesiones Registradas"), e("div", { style: {
-		fontSize: "20px",
-		fontWeight: 600,
-		marginTop: "4px"
-	} }, stats.sessionsCount ?? "—"))), e("div", { style: {
+	}, e("span")));
+	const healthLabel = health.status === "online" ? `Conectado · puerto ${health.port}` : health.status === "checking" ? "Comprobando conexión…" : "API local inactiva · puente MCP disponible";
+	const healthColor = health.status === "online" ? "var(--dsw-alias-state-success-primary)" : health.status === "checking" ? "var(--dsw-alias-state-warn-label)" : "var(--dsw-alias-label-tertiary)";
+	return e("div", {
+		className: "engram-settings",
+		style: styles.root
+	}, e("style", null, settingsUiCss), e("p", { style: styles.intro }, "Memoria persistente para conservar contexto útil entre sesiones."), e("section", {
+		style: styles.section,
+		"aria-label": "Estado de Engram"
+	}, e("div", { style: {
 		display: "flex",
-		flexDirection: "column",
-		gap: "16px",
-		background: "var(--dsw-alias-bg-layer-3, #27272a)",
-		padding: "20px",
-		borderRadius: "12px",
-		border: "1px solid var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.1))"
-	} }, e("div", { style: {
-		display: "flex",
+		alignItems: "flex-start",
 		justifyContent: "space-between",
-		alignItems: "center"
-	} }, e("h3", { style: {
-		margin: 0,
-		fontSize: "15px",
-		fontWeight: 600
-	} }, "Comportamiento de Memoria"), savedNotice && e("span", { style: {
-		fontSize: "12px",
-		color: "#22c55e"
-	} }, savedNotice)), renderToggle("Inyección de Memoria Inicial (ambientMemory)", "Inyecta automáticamente observaciones recientes al iniciar una sesión o tras compactación. Desactívalo para ahorrar tokens y recuperar memoria bajo demanda con mem_context o mem_search.", settings.ambientMemory, () => updateSetting("ambientMemory", !settings.ambientMemory)), renderToggle("Captura Automática de Prompts (capturePrompts)", "Registra los mensajes y peticiones del usuario en Engram para mantener el historial de intenciones entre sesiones.", settings.capturePrompts, () => updateSetting("capturePrompts", !settings.capturePrompts)), renderToggle("Captura Pasiva de Aprendizajes (captureToolResults)", "Extrae automáticamente hallazgos y notas estructuradas en encabezados ## Key Learnings: o ## Aprendizajes Clave:.", settings.captureToolResults, () => updateSetting("captureToolResults", !settings.captureToolResults)), e("div", { style: {
+		gap: "16px"
+	} }, e("div", { style: { minWidth: 0 } }, e("h2", { style: {
+		...styles.sectionTitle,
+		fontSize: "15px"
+	} }, "Estado del servicio"), e("p", {
+		style: {
+			...styles.hint,
+			marginTop: "3px",
+			color: healthColor
+		},
+		role: "status",
+		"aria-live": "polite"
+	}, healthLabel), e("p", { style: styles.hint }, health.status === "online" ? `Instancia: ${health.instanceId ? `${health.instanceId.slice(0, 12)}…` : "local"} · Versión ${health.version ?? "activa"}` : "Las herramientas de Engram siguen disponibles mediante el puente MCP. La API HTTP es opcional.")), e("button", {
+		type: "button",
+		onClick: checkServer,
+		disabled: health.status === "checking",
+		style: styles.button
+	}, health.status === "checking" ? "Comprobando…" : "Actualizar")), stats && e("div", {
+		className: "engram-stats",
+		style: {
+			borderTop: "0.5px solid var(--dsw-alias-border-l2)",
+			marginTop: "12px",
+			paddingTop: "12px"
+		}
+	}, ...[
+		["Proyectos", stats.projectsCount],
+		["Observaciones", stats.observationsCount],
+		["Sesiones", stats.sessionsCount]
+	].map(([label, value]) => e("div", {
+		className: "engram-stat",
+		key: label
+	}, e("div", { className: "engram-stat-label" }, label), e("div", { className: "engram-stat-value" }, value ?? "—"))))), e("section", {
+		style: styles.section,
+		"aria-labelledby": "engram-memory-settings-title"
+	}, e("div", { style: {
 		display: "flex",
-		justifyContent: "space-between",
 		alignItems: "center",
-		padding: "12px 0"
-	} }, e("div", { style: { maxWidth: "80%" } }, e("div", { style: {
-		fontWeight: 500,
-		fontSize: "14px"
-	} }, "Límite de Bytes de Contexto (contextLimit)"), e("div", { style: {
-		fontSize: "12px",
-		color: "var(--dsw-alias-label-secondary, #a1a1aa)",
-		marginTop: "4px"
-	} }, "Capacidad máxima del bloque inyectado (por defecto: 8000 bytes).")), e("input", {
+		justifyContent: "space-between",
+		gap: "12px",
+		paddingBottom: "5px"
+	} }, e("h2", {
+		id: "engram-memory-settings-title",
+		style: styles.sectionTitle
+	}, "Comportamiento de memoria"), savedNotice && e("span", {
+		role: "status",
+		"aria-live": "polite"
+	}, savedNotice)), renderToggle("Inyectar contexto al iniciar", "Añade recuerdos relevantes al inicio de una sesión y después de una compactación.", settings.ambientMemory, () => updateSetting("ambientMemory", !settings.ambientMemory)), renderToggle("Guardar prompts del usuario", "Conserva las peticiones del usuario para mantener continuidad entre sesiones.", settings.capturePrompts, () => updateSetting("capturePrompts", !settings.capturePrompts)), renderToggle("Guardar aprendizajes automáticamente", "Captura aprendizajes estructurados que el agente produce en sus respuestas.", settings.captureToolResults, () => updateSetting("captureToolResults", !settings.captureToolResults)), e("div", { style: {
+		...styles.row,
+		borderBottom: 0,
+		paddingBottom: "2px"
+	} }, e("div", { style: {
+		minWidth: 0,
+		flex: 1
+	} }, e("label", {
+		htmlFor: "engram-context-limit",
+		style: styles.rowLabel
+	}, "Límite de contexto"), e("p", { style: styles.hint }, "Máximo de bytes de memoria que se añaden al contexto (predeterminado: 8.000).")), e("input", {
+		id: "engram-context-limit",
 		type: "number",
 		min: 0,
 		max: 1e5,
 		step: 1e3,
 		value: settings.contextLimit,
 		onChange: (ev) => updateSetting("contextLimit", Number(ev.target.value) || 0),
-		style: {
-			width: "100px",
-			padding: "6px 10px",
-			borderRadius: "6px",
-			border: "1px solid var(--dsw-alias-border-l4, rgba(255, 255, 255, 0.15))",
-			background: "var(--dsw-alias-bg-layer-4, #3f3f46)",
-			color: "inherit",
-			fontSize: "13px",
-			textAlign: "right"
-		}
-	}))), e("div", { style: {
-		display: "flex",
-		alignItems: "center",
-		justifyContent: "space-between",
-		padding: "14px 18px",
-		borderRadius: "10px",
-		background: "rgba(59, 130, 246, 0.08)",
-		border: "1px solid rgba(59, 130, 246, 0.2)",
-		fontSize: "13px"
-	} }, e("span", { style: { color: "var(--dsw-alias-label-secondary, #a1a1aa)" } }, "💡 ¿Deseas explorar o buscar recuerdos manualmente? Ejecuta ", e("code", null, "engram tui"), " en tu terminal.")));
+		style: styles.control
+	}))));
 }
 function apply(ctx) {
 	ctx.slots?.inject?.("settings.section", () => {
@@ -336,4 +341,5 @@ exports.EngramSettingsView = EngramSettingsView;
 exports.apply = apply;
 exports.inject = inject;
 exports.name = name;
+exports.settingsUiCss = settingsUiCss;
 return module.exports; } });
