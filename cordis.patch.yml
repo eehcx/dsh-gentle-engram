@@ -18,7 +18,6 @@
     - id: engram-memory
       name: dsh-gentle-engram
       config:
-        serverName: engram
         contextLimit: 8000
         capturePrompts: true
         captureToolResults: true
