@@ -5,6 +5,14 @@ All notable changes to `dsh-gentle-engram` are documented here.
 This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and uses [Semantic Versioning](https://semver.org/).
 
+## [0.3.2](https://github.com/eehcx/dsh-gentle-engram/compare/v0.3.1...v0.3.2) (2026-11-11)
+
+
+### Bug Fixes
+
+* repair plugin config and browser settings UI ([fb67f88](https://github.com/eehcx/dsh-gentle-engram/commit/fb67f886f88c8081891c162db91f5d3d0b628bfe))
+* repair plugin config and browser settings UI ([a956f8a](https://github.com/eehcx/dsh-gentle-engram/commit/a956f8a64ea81fb82e15d9371fd58348ce081919))
+
 ## [0.3.1](https://github.com/eehcx/dsh-gentle-engram/compare/v0.3.0...v0.3.1) (2026-11-11)
 
 
