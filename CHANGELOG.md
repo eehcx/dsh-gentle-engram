@@ -5,6 +5,14 @@ All notable changes to `dsh-gentle-engram` are documented here.
 This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and uses [Semantic Versioning](https://semver.org/).
 
+## [0.4.0](https://github.com/eehcx/dsh-gentle-engram/compare/v0.3.3...v0.4.0) (2026-11-11)
+
+
+### Features
+
+* **ui:** match Engram settings to DSH themes ([6e08c57](https://github.com/eehcx/dsh-gentle-engram/commit/6e08c5734e470027c50026e0fff1e0ffb6e2f9c7))
+* **ui:** match Engram settings to DSH themes ([df7b74b](https://github.com/eehcx/dsh-gentle-engram/commit/df7b74bc404cbd8ea12b1bde524ebd0ec023b1fe))
+
 ## [0.3.3](https://github.com/eehcx/dsh-gentle-engram/compare/v0.3.2...v0.3.3) (2026-11-11)
 
 
