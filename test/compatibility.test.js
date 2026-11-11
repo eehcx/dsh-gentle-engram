@@ -21,6 +21,10 @@ test('declares peer ranges for the DSH 0.1 and 0.2 tooling lines', async () => {
     manifest.peerDependencies['@deepseek-ai/cordis'],
     '^4.0.1 || ~4.0.6-alpha.1',
   );
+  assert.deepEqual(manifest.peerDependenciesMeta, {
+    '@deepseek-ai/cordis': { optional: true },
+    '@deepseek-ai/dsh-tools': { optional: true },
+  });
 });
 
 test('publishes an alpha compatibility matrix and links it from user-facing docs', async () => {
