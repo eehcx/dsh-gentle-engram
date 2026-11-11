@@ -5,6 +5,14 @@ All notable changes to `dsh-gentle-engram` are documented here.
 This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and uses [Semantic Versioning](https://semver.org/).
 
+## [0.3.1](https://github.com/eehcx/dsh-gentle-engram/compare/v0.3.0...v0.3.1) (2026-11-11)
+
+
+### Bug Fixes
+
+* declare peer dependencies as optional in package metadata ([b5ba8c2](https://github.com/eehcx/dsh-gentle-engram/commit/b5ba8c28142a328d34f69d515cc55780903a2938))
+* declare peer dependencies as optional in package metadata ([33be5f5](https://github.com/eehcx/dsh-gentle-engram/commit/33be5f5002efe299e06ed19f9399c52ea4536491))
+
 ## [0.3.0](https://github.com/eehcx/dsh-gentle-engram/compare/v0.2.0...v0.3.0) (2026-11-10)
 
 
