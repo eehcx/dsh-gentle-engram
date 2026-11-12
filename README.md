@@ -1,127 +1,59 @@
 # dsh-gentle-engram
 
-Host Cordis plugin written in TypeScript for people using DeepSeek Harness (DSH)
-who want [Engram](https://github.com/Gentleman-Programming/engram) persistent
-memory to follow the DSH agent lifecycle.
+[![npm version](https://img.shields.io/npm/v/dsh-gentle-engram?logo=npm&label=npm)](https://www.npmjs.com/package/dsh-gentle-engram)
+[![CI](https://github.com/eehcx/dsh-gentle-engram/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/eehcx/dsh-gentle-engram/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Node.js 22](https://img.shields.io/badge/Node.js-22-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 
-This integration requires [Engram](https://github.com/Gentleman-Programming/engram) to be installed and available on your system; the bridge cannot work without it.
+A [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness) Host plugin that connects agent sessions to [Engram](https://github.com/Gentleman-Programming/engram) persistent memory. It restores bounded project context, captures selected prompts and learnings, and summarizes sessions when they end.
 
-> **Alpha / early access:** This package is being prepared for public alpha
-> feedback. Expect incomplete compatibility coverage, breaking changes, and
-> behavior that still depends on the DSH and Engram versions installed on your
-> machine. It is suitable for evaluation and focused feedback, not a stability
-> guarantee.
+> **Early access:** `latest` is the recommended npm installation channel, but this integration is still evolving. Compatibility depends on the installed DSH and Engram versions; see the [compatibility matrix](docs/alpha-compatibility.md). Declared peer-dependency ranges do not establish that a live DSH + Engram combination has been verified.
 
-## Compatibility and requirements
+## Install
 
-The repository's CI currently runs on **Node.js 22**. The package declares
-`@deepseek-ai/cordis` `^4.0.1 || ~4.0.6-alpha.1` and
-`@deepseek-ai/dsh-tools` `^0.1.1-rc.2 || ^0.2.2-alpha.2` as peer dependencies.
-The second DSH tools range covers the DSH 0.2.2-alpha.2 line. A declared range
-is packaging metadata, not proof that a DSH/Engram combination works: see the
-[alpha compatibility matrix](docs/alpha-compatibility.md) for the checks that
-have passed and the combinations that remain unknown.
-
-You need:
-
-- Node.js 22 for the verified development and CI path.
-- `pnpm` 10.15.0 for repository development (`package.json` declares this
-  package manager).
-- DeepSeek Harness with the `dsh plugin` command for installation.
-- Engram installed as `engram` in `PATH`.
-- A configured DSH profile, such as `web`.
-
-## Design
-
-- Uses the existing `@deepseek-ai/dsh-mcp-client` row for official [Engram](https://github.com/Gentleman-Programming/engram) MCP stdio tools.
-- Hooks DSH session start, inbound prompts, tool results, turn stopping, and agent disposal.
-- Seeds relevant [Engram](https://github.com/Gentleman-Programming/engram) context into the next model step.
-- Saves user-originated prompts and intentional passive learnings asynchronously.
-- Serializes per-session writes and waits for pending writes at turn boundaries.
-- Closes [Engram](https://github.com/Gentleman-Programming/engram) sessions and records a structured summary when an agent is disposed.
-- Never accesses [Engram](https://github.com/Gentleman-Programming/engram) SQLite directly and avoids forwarding likely secrets.
-
-## Capture configuration
-
-Prompt capture and passive tool-result capture are independent settings; both
-default to `true`. Set `capturePrompts: false` in the lifecycle plugin's bundle
-configuration to disable `mem_save_prompt` calls. Session startup, context
-recovery, and tool-result capture remain enabled. Set `captureToolResults: false`
-to disable passive tool-result capture without affecting prompt capture.
-
-Prompt capture accepts only messages with `role: "user"` and
-`source.kind: "user"`; plugin, system, and unknown sources are ignored. Passive
-capture skips failed tool results and generic output. It captures only
-bulleted or numbered entries under an exact `## Key Learnings:` heading,
-omitting surrounding output and trivial entries such as “ok” or “done”.
-
-Engram capture requires a non-empty DSH session working directory and successful
-project registration. If either is unavailable, the plugin skips memory reads
-and writes for that session.
-
-Before sending captured text to Engram, the plugin recursively replaces
-`<private>...</private>` blocks—including nested and multiline blocks—with
-`[REDACTED]`. Each outgoing prompt or passive tool-result payload is limited to
-4,000 characters and marked when truncated. This is explicit marker-based
-redaction, not a complete secret scanner; avoid sending secrets or sensitive
-data outside marked blocks.
-
-## Installation from npm
-
-Install the alpha channel with:
-
-```bash
-npx @deepseek-ai/dsh plugin --profile web add dsh-gentle-engram@alpha
-```
-
-Restart DSH after installation. The package is a Host bundle: its `cordis.patch.yml` owns both the MCP bridge and lifecycle plugin. Do not edit shipped presets or add a second manual [Engram](https://github.com/Gentleman-Programming/engram) MCP row.
-
-Check that [Engram](https://github.com/Gentleman-Programming/engram) is available before starting DSH:
+Requirements: DSH with the `dsh plugin` command, a configured profile (for example `web`), and the `engram` executable available in `PATH`.
 
 ```bash
 engram --version
+npx @deepseek-ai/dsh plugin --profile web add dsh-gentle-engram@latest
 ```
 
-The command must resolve successfully before DSH starts. If it does not, fix
-the Engram installation or `PATH` first; this plugin does not provide Engram.
+Restart DSH after installation. The bundle configures the Engram MCP stdio bridge and the lifecycle plugin together. **Do not add a second Engram MCP row manually.** The `latest` npm dist-tag currently resolves to `0.4.0`.
 
-## What to expect
+## What it does
 
-The plugin connects the existing Engram MCP tools to DSH session start,
-prompts, tool results, turn boundaries, and agent disposal. It injects bounded
-prior context, serializes per-agent writes, redacts explicit private blocks,
-limits captured payloads, skips failed and unmarked tool results, and records a
-disposal summary. It does not access Engram's SQLite database directly.
+- Starts an Engram memory session for each DSH agent and uses the official Engram MCP tools over stdio.
+- Injects bounded, explicitly **untrusted** project memories at session start; refreshes them after compaction when DSH emits the matching lifecycle event.
+- Optionally captures user-originated prompts and intentional learnings from successful tool output. These capture controls are independent.
+- Serializes memory calls per agent, waits for pending work at turn boundaries, and writes a session summary on disposal.
+- Fails closed when a session has no working directory or Engram session startup fails.
+- Includes an English/Spanish Engram settings view in DSH. It follows DSH light/dark theme tokens, exposes memory and capture controls, and can show local API health and counts when the optional Engram HTTP API is available. When the API is offline, it displays Engram installation guidance; the MCP bridge does not depend on that HTTP API.
 
-Recovered Engram context is reference data, not executable instruction. See
-the [memory context policy](docs/memory-context-policy.md) for the trust
-boundary, on-demand retrieval, and compaction behavior.
+## Settings and capture
 
-Known limitations:
+The lifecycle plugin configuration is defined in the DSH bundle (`cordis.patch.yml`). Defaults include ambient memory, prompt capture, and passive tool-result capture enabled, with an 8,000-byte context limit. The settings view provides controls for those options and the context limit; its interface is localized in English and Spanish. Preferences are saved locally by the DSH client.
 
-- The [alpha compatibility matrix](docs/alpha-compatibility.md) distinguishes
-  verified package checks from unknown DSH/Engram combinations; no live
-  combination is verified yet.
-- The bridge depends on the `engram` executable and DSH's MCP/plugin lifecycle;
-  missing or incompatible host tooling can prevent startup or persistence.
-- Private-block redaction and tool-result filtering are not a guarantee that
-  secrets or personal data are safe to send. Do not use them as a complete
-  security boundary.
-- The package does not promise backward compatibility across DSH, Engram, or
-  alpha package releases.
+Prompt capture accepts only messages identified as user-originated. Passive capture ignores failed results and generic output; it stores only non-trivial bullets under a `Key Learnings` or `Aprendizajes` heading. Captured text is limited to 4,000 characters. Explicit `<private>...</private>` blocks are replaced with `[REDACTED]` before capture; output containing terms such as `password`, `token`, or `secret` is also skipped for passive capture.
+
+These safeguards are deliberately limited: marker-based redaction and filtering are **not** a complete secret scanner or privacy boundary. Do not send secrets or sensitive data unless they are properly excluded.
+
+## Memory trust and compatibility
+
+Retrieved memories are reference data, not instructions or authority. The plugin frames injected context as untrusted and asks the model to verify consequential or conflicting claims against current instructions and repository evidence. See the [memory context policy](docs/memory-context-policy.md).
+
+The package declares peer ranges for Cordis `^4.0.1 || ~4.0.6-alpha.1` and DSH tools `^0.1.1-rc.2 || ^0.2.2-alpha.2`. These are install metadata, not an end-to-end support guarantee. The [alpha compatibility matrix](docs/alpha-compatibility.md) records what has actually been checked; live DSH + Engram session compatibility remains **unknown** there.
 
 ## Troubleshooting
 
-1. Confirm the executable is available: `engram --version`.
-2. Confirm the package was added to the intended DSH profile, then restart DSH.
-3. If context or writes are missing, check that no manually added Engram MCP
-   row conflicts with this package's Host bundle. Remove the duplicate row and
-   restart DSH.
-4. If the problem persists, reproduce it with the smallest DSH profile and
-   report the exact commands, versions, and observed behavior as described in
-   [CONTRIBUTING.md](CONTRIBUTING.md).
+1. Confirm `engram --version` works in the environment where DSH starts.
+2. Confirm the plugin is installed in the intended DSH profile, then restart DSH.
+3. Remove any manually configured duplicate Engram MCP row and restart.
+4. If memory is not loaded or saved, check that the DSH session has a working directory and consult the [compatibility matrix](docs/alpha-compatibility.md).
+5. For a reproducible issue, include sanitized versions, platform, profile, and steps. Do not attach prompts, memory contents, tokens, database files, or unsanitized logs. See [Contributing](CONTRIBUTING.md).
 
-## Local development
+## Development
+
+Requires Node.js 22 and pnpm 10.15.0 for the verified repository CI path.
 
 ```bash
 pnpm install --frozen-lockfile
@@ -130,39 +62,12 @@ pnpm test
 pnpm run build
 ```
 
-CI runs these checks on Node.js 22, along with a high-severity dependency
-audit. The test suite exercises the built plugin's lifecycle behavior without
-requiring a live DSH or Engram installation.
+CI runs dependency auditing, typechecking, tests, and build on Node.js 22. Tests exercise the built plugin with mock host/tool APIs; passing them does not by itself verify a live DSH + Engram installation.
 
-## Contributing
+## Contributing and security
 
-Contributions, bug reports, documentation updates, compatibility checks, and
-focused feature proposals are welcome. See
-[`CONTRIBUTING.md`](CONTRIBUTING.md) for the development workflow, checks,
-feedback template, and contribution opportunities.
-
-Before starting:
-
-- Check existing [issues](https://github.com/eehcx/dsh-gentle-engram/issues) and
-  pull requests to avoid duplicate work.
-- Open an issue first for larger changes so the approach can be discussed.
-- Do not include secrets, personal Engram data, local database files, or
-  machine-specific configuration in commits.
-
-For a typical change:
-
-1. Fork the repository and create a focused branch.
-2. Install dependencies with `pnpm install --frozen-lockfile`.
-3. Make the smallest change that solves the problem, preserving existing
-   TypeScript and Cordis patterns.
-4. Run `pnpm run typecheck`, `pnpm test`, and `pnpm run build`.
-5. Open a pull request explaining what changed, why, and how it was validated.
-
-Keep pull requests focused, avoid editing generated `dist/` output directly,
-and do not include unrelated formatting or dependency changes. Please report
-suspected security vulnerabilities privately rather than in a public issue.
+Bug reports, compatibility checks, documentation, and focused improvements are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Report suspected vulnerabilities privately using the guidance in [SECURITY.md](SECURITY.md).
 
 ## License
 
-This project is released under the MIT License. See [`LICENSE`](LICENSE) for
-the complete license text.
+[MIT](LICENSE)
