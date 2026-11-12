@@ -1,9 +1,12 @@
 import React, { useEffect, useState, useCallback } from 'react'
+import { es, en, translate, type Messages } from './client-locales.ts'
 
 const e = React.createElement
 
 export const name = 'dsh-gentle-engram'
 export const inject = ['slots', 'locale']
+
+const NS = 'settings.engram'
 
 interface ServerHealth {
   status: 'online' | 'offline' | 'checking'
@@ -128,6 +131,28 @@ const styles = {
     lineHeight: '18px',
     cursor: 'pointer',
   },
+  banner: {
+    padding: '14px',
+    border: '0.5px solid var(--dsw-alias-border-l3, var(--dsw-alias-border-l2))',
+    borderRadius: 'var(--dsw-radius-lg, 16px)',
+    background: 'var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-layer-1))',
+    marginTop: '12px',
+  },
+  codeSnippet: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '8px',
+    padding: '6px 10px',
+    marginTop: '6px',
+    marginBottom: '8px',
+    background: 'var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-layer-1))',
+    border: '0.5px solid var(--dsw-alias-border-l2)',
+    borderRadius: 'var(--dsw-radius-sm, 6px)',
+    fontFamily: 'monospace',
+    fontSize: '12px',
+    overflowX: 'auto' as const,
+  },
 }
 
 export const settingsUiCss = `
@@ -159,11 +184,43 @@ body[data-ds-dark-theme] .engram-settings { color-scheme: dark; }
 @media (prefers-reduced-motion: reduce) { .engram-settings [role="switch"] span { transition: none; } }
 `
 
-export function EngramSettingsView(props: { ctx?: any }) {
+export function EngramSettingsView(props: { ctx?: any; t?: (key: keyof Messages, params?: Record<string, string | number>) => string }) {
   const [health, setHealth] = useState<ServerHealth>({ status: 'checking', port: 7437 })
   const [stats, setStats] = useState<ServerStats | null>(null)
   const [settings, setSettings] = useState<PluginSettings>(loadSavedSettings)
   const [savedNotice, setSavedNotice] = useState<string | null>(null)
+  const [copiedKey, setCopiedKey] = useState<string | null>(null)
+
+  // Language translation helper: prefer props.t or ctx.locale.bind(NS), else fallback translate
+  const t = useCallback(
+    (key: keyof Messages, params?: Record<string, string | number>): string => {
+      if (typeof props.t === 'function') {
+        return props.t(key, params)
+      }
+      try {
+        if (typeof props.ctx?.locale?.bind === 'function') {
+          const bound = props.ctx.locale.bind(NS)
+          const res = bound(key, params)
+          if (res) return res
+        }
+      } catch {
+        // ignore
+      }
+      return translate(key, params, props.ctx?.locale?.preference ?? 'en')
+    },
+    [props.t, props.ctx],
+  )
+
+  const copyToClipboard = (text: string, key: string) => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        setCopiedKey(key)
+        setTimeout(() => setCopiedKey(null), 2000)
+      }).catch(() => {
+        // ignore
+      })
+    }
+  }
 
   const checkServer = useCallback(async () => {
     setHealth((prev) => ({ ...prev, status: 'checking' }))
@@ -221,7 +278,7 @@ export function EngramSettingsView(props: { ctx?: any }) {
       }
       return next
     })
-    setSavedNotice('Cambios guardados automáticamente')
+    setSavedNotice(t('savedNotice'))
     setTimeout(() => setSavedNotice(null), 2500)
   }
 
@@ -250,10 +307,10 @@ export function EngramSettingsView(props: { ctx?: any }) {
     )
 
   const healthLabel = health.status === 'online'
-    ? `Conectado · puerto ${health.port}`
+    ? t('statusOnline', { port: health.port ?? 7437 })
     : health.status === 'checking'
-      ? 'Comprobando conexión…'
-      : 'API local inactiva · puente MCP disponible'
+      ? t('statusChecking')
+      : t('statusOffline')
   const healthColor = health.status === 'online'
     ? 'var(--dsw-alias-state-success-primary)'
     : health.status === 'checking'
@@ -264,17 +321,17 @@ export function EngramSettingsView(props: { ctx?: any }) {
     'div',
     { className: 'engram-settings', style: styles.root },
     e('style', null, settingsUiCss),
-    e('p', { style: styles.intro }, 'Memoria persistente para conservar contexto útil entre sesiones.'),
+    e('p', { style: styles.intro }, t('intro')),
     e(
       'section',
-      { style: styles.section, 'aria-label': 'Estado de Engram' },
+      { style: styles.section, 'aria-label': t('serviceStatus') },
       e(
         'div',
         { style: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px' } },
         e(
           'div',
           { style: { minWidth: 0 } },
-          e('h2', { style: { ...styles.sectionTitle, fontSize: '15px' } }, 'Estado del servicio'),
+          e('h2', { style: { ...styles.sectionTitle, fontSize: '15px' } }, t('serviceStatus')),
           e(
             'p',
             { style: { ...styles.hint, marginTop: '3px', color: healthColor }, role: 'status', 'aria-live': 'polite' },
@@ -284,29 +341,94 @@ export function EngramSettingsView(props: { ctx?: any }) {
             'p',
             { style: styles.hint },
             health.status === 'online'
-              ? `Instancia: ${health.instanceId ? `${health.instanceId.slice(0, 12)}…` : 'local'} · Versión ${health.version ?? 'activa'}`
-              : 'Las herramientas de Engram siguen disponibles mediante el puente MCP. La API HTTP es opcional.',
+              ? t('instanceInfo', {
+                  instance: health.instanceId ? `${health.instanceId.slice(0, 12)}…` : 'local',
+                  version: health.version ?? 'active',
+                })
+              : t('mcpBridgeNotice'),
           ),
         ),
         e(
           'button',
           { type: 'button', onClick: checkServer, disabled: health.status === 'checking', style: styles.button },
-          health.status === 'checking' ? 'Comprobando…' : 'Actualizar',
+          health.status === 'checking' ? t('checking') : t('refresh'),
         ),
       ),
       stats && e(
         'div',
         { className: 'engram-stats', style: { borderTop: '0.5px solid var(--dsw-alias-border-l2)', marginTop: '12px', paddingTop: '12px' } },
         ...([
-          ['Proyectos', stats.projectsCount],
-          ['Observaciones', stats.observationsCount],
-          ['Sesiones', stats.sessionsCount],
+          [t('statsProjects'), stats.projectsCount],
+          [t('statsObservations'), stats.observationsCount],
+          [t('statsSessions'), stats.sessionsCount],
         ] as const).map(([label, value]) => e(
           'div',
           { className: 'engram-stat', key: label },
           e('div', { className: 'engram-stat-label' }, label),
           e('div', { className: 'engram-stat-value' }, value ?? '—'),
         )),
+      ),
+      // If service is offline, provide instructions to install or run Engram
+      health.status === 'offline' && e(
+        'div',
+        { style: styles.banner },
+        e('div', { style: { fontWeight: 500, fontSize: '13px', marginBottom: '4px' } }, t('installGuideTitle')),
+        e('p', { style: styles.hint }, t('notInstalledBannerDesc')),
+        
+        e('div', { style: { marginTop: '10px' } },
+          e('div', { style: { ...styles.hint, color: 'var(--dsw-alias-label-secondary)' } }, t('installGuideStepBrew')),
+          e(
+            'div',
+            { style: styles.codeSnippet },
+            e('code', { style: { color: 'var(--dsw-alias-label-primary)' } }, t('brewInstallCommand')),
+            e(
+              'button',
+              {
+                type: 'button',
+                style: styles.button,
+                onClick: () => copyToClipboard(t('brewInstallCommand'), 'brew'),
+              },
+              copiedKey === 'brew' ? t('copiedCommand') : t('copyCommand'),
+            ),
+          ),
+        ),
+
+        e('div', { style: { marginTop: '8px' } },
+          e('div', { style: { ...styles.hint, color: 'var(--dsw-alias-label-secondary)' } }, t('installGuideStepBinary')),
+          e(
+            'div',
+            { style: styles.codeSnippet },
+            e('code', { style: { color: 'var(--dsw-alias-label-primary)' } }, t('curlInstallCommand')),
+            e(
+              'button',
+              {
+                type: 'button',
+                style: styles.button,
+                onClick: () => copyToClipboard(t('curlInstallCommand'), 'curl'),
+              },
+              copiedKey === 'curl' ? t('copiedCommand') : t('copyCommand'),
+            ),
+          ),
+        ),
+
+        e(
+          'div',
+          { style: { marginTop: '10px', display: 'flex', justifyContent: 'flex-end' } },
+          e(
+            'a',
+            {
+              href: 'https://github.com/Gentleman-Programming/engram',
+              target: '_blank',
+              rel: 'noopener noreferrer',
+              style: {
+                ...styles.button,
+                textDecoration: 'none',
+                color: 'var(--dsw-alias-state-business-primary, var(--dsw-alias-brand-primary))',
+              },
+            },
+            t('openDocs'),
+          ),
+        ),
       ),
     ),
     e(
@@ -315,24 +437,24 @@ export function EngramSettingsView(props: { ctx?: any }) {
       e(
         'div',
         { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', paddingBottom: '5px' } },
-        e('h2', { id: 'engram-memory-settings-title', style: styles.sectionTitle }, 'Comportamiento de memoria'),
+        e('h2', { id: 'engram-memory-settings-title', style: styles.sectionTitle }, t('behaviorSection')),
         savedNotice && e('span', { role: 'status', 'aria-live': 'polite' }, savedNotice),
       ),
       renderToggle(
-        'Inyectar contexto al iniciar',
-        'Añade recuerdos relevantes al inicio de una sesión y después de una compactación.',
+        t('ambientMemoryTitle'),
+        t('ambientMemoryDesc'),
         settings.ambientMemory,
         () => updateSetting('ambientMemory', !settings.ambientMemory),
       ),
       renderToggle(
-        'Guardar prompts del usuario',
-        'Conserva las peticiones del usuario para mantener continuidad entre sesiones.',
+        t('capturePromptsTitle'),
+        t('capturePromptsDesc'),
         settings.capturePrompts,
         () => updateSetting('capturePrompts', !settings.capturePrompts),
       ),
       renderToggle(
-        'Guardar aprendizajes automáticamente',
-        'Captura aprendizajes estructurados que el agente produce en sus respuestas.',
+        t('captureToolResultsTitle'),
+        t('captureToolResultsDesc'),
         settings.captureToolResults,
         () => updateSetting('captureToolResults', !settings.captureToolResults),
       ),
@@ -342,8 +464,8 @@ export function EngramSettingsView(props: { ctx?: any }) {
         e(
           'div',
           { style: { minWidth: 0, flex: 1 } },
-          e('label', { htmlFor: 'engram-context-limit', style: styles.rowLabel }, 'Límite de contexto'),
-          e('p', { style: styles.hint }, 'Máximo de bytes de memoria que se añaden al contexto (predeterminado: 8.000).'),
+          e('label', { htmlFor: 'engram-context-limit', style: styles.rowLabel }, t('contextLimitTitle')),
+          e('p', { style: styles.hint }, t('contextLimitDesc')),
         ),
         e('input', {
           id: 'engram-context-limit',
@@ -362,13 +484,33 @@ export function EngramSettingsView(props: { ctx?: any }) {
 }
 
 export function apply(ctx: any) {
+  try {
+    if (typeof ctx.effect === 'function' && typeof ctx.locale?.register === 'function') {
+      ctx.effect(() => ctx.locale.register(NS, { es, en }), 'dsh-gentle-engram: copy dictionaries')
+    }
+  } catch {
+    // ignore
+  }
+
+  const resolveLabel = () => {
+    try {
+      if (typeof ctx.locale?.bind === 'function') {
+        const t = ctx.locale.bind(NS)
+        return t('nav') || 'Engram Memory'
+      }
+    } catch {
+      // ignore
+    }
+    return translate('nav', undefined, ctx.locale?.preference ?? 'en')
+  }
+
   ctx.slots?.inject?.('settings.section', () => {
     return ctx.slots.register(
       {
         name: 'settings.section',
         id: 'engram',
         order: 85,
-        label: () => 'Engram Memory',
+        label: resolveLabel,
         inject: () => ({ ctx }),
       },
       EngramSettingsView,
@@ -381,7 +523,7 @@ export function apply(ctx: any) {
         name: 'settings.plugins.tab',
         id: 'engram',
         order: 5,
-        label: () => 'Engram Memory',
+        label: resolveLabel,
         inject: () => ({ ctx }),
       },
       EngramSettingsView,
